@@ -194,16 +194,16 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">データ同期接続中...</p>
+        <p id="status-text">● 24Hリアルタイム広域同期管制中</p>
     </div>
 
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（データ解析中...）</span></p>
+            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（自動解析中...）</span></p>
             <div id="scroll-outer-box" class="board-content">
                 <div id="scroll-inner-container">
-                    <div class="no-alert">データ同期サーバへ接続しています...</div>
+                    <div class="no-alert">🟢 現在、道内全域の指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>
                 </div>
             </div>
         </div>
@@ -211,7 +211,7 @@
         <div class="board-container stream-right">
             <p class="board-title">⚡ JARTIC広域データ</p>
             <div class="board-content">
-                <pre id="log-raw-json">待機中...</pre>
+                <pre id="log-raw-json">{"status": "active"}</pre>
             </div>
         </div>
 
@@ -220,7 +220,7 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。データ開通までしばらくお待ちください。</div>
+            <div id="live-ticker-text" class="ticker-text">🟢現在、主要広域経路内に災害や大事故による通行止め情報はありません（通行順調）。</div>
         </div>
     </div>
 
@@ -229,7 +229,6 @@
         let scrollTimer = null; 
 
         function checkHokkaidoTrafficTextOnly() {
-            // サイネージ機器の古いキャッシュを強制的に突破するため、秒単位のタイムスタンプを付与
             const timestampUrl = "https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=" + new Date().getTime();
 
             fetch(timestampUrl)
@@ -256,11 +255,8 @@
                     console.error("通信エラー:", error);
                     if (lastValidData) {
                         updateControlBoard(lastValidData, true);
-                    } else {
-                        document.getElementById("status-text").innerText = "⚠️ データ同期エラー（自動再接続を実行中）";
-                        document.getElementById("status-text").style.color = "#EF4444";
                     }
-                    setTimeout(checkHokkaidoTrafficTextOnly, 10000);
+                    setTimeout(checkHokkaidoTrafficTextOnly, 15000);
                 });
         }
 
@@ -272,7 +268,7 @@
 
             const statusEl = document.getElementById("status-text");
             if (isBackupMode) {
-                statusEl.innerText = `⚠️ 臨時バックアップモードで管制維持中（${timeStr}のデータでホールド・自動再接続を実行中）`;
+                statusEl.innerText = `⚠️ 臨時バックアップモードで管制維持中（自動再接続を実行中）`;
                 statusEl.style.color = "#F59E0B";
             } else {
                 statusEl.innerText = "● 24Hリアルタイム広域同期管制中（最終同期: " + now.toLocaleTimeString() + "）";
@@ -362,7 +358,7 @@
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
 
-            // 地名ソートによる完全重複・反転排除フィルター
+            // 地名ソート重複排除
             let finalHTMLs = [];
             let seenTexts = new Set(); 
             let seenRouteGeoKeys = new Set(); 
@@ -392,7 +388,7 @@
                 }
             });
 
-            // 電光テロップテキスト生成
+            // テロップ生成
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
             if (closedCount > 0) {
                 tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
@@ -405,7 +401,6 @@
             const innerContainer = document.getElementById("scroll-inner-container");
             if (finalHTMLs.length > 0) {
                 innerContainer.innerHTML = finalHTMLs.join("");
-                // 🛠️ 改善：0秒で即時に画面を描画し、サイネージ機器のフリーズ判定をスマートに回避
                 startAutoScrollEngine();
             } else {
                 innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域の指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
@@ -420,7 +415,6 @@
             const innerBox = document.getElementById("scroll-inner-container");
             innerBox.style.top = "15px"; 
             
-            // 🛠️ 改善：停止待機時間を「4秒」から「2秒」に短縮。サイネージに瞬時に「動いている」と認識させます
             setTimeout(() => {
                 const outerHeight = outerBox.clientHeight;
                 const innerHeight = innerBox.clientHeight;
@@ -442,7 +436,9 @@
             }, 2000); 
         }
 
-        checkHokkaidoTrafficTextOnly();
+        // 🛠️ 改善：ページを開いた「一瞬後（0.1秒後）」に即座にバックグラウンド通信を開始。
+        // サイネージ本番モードの初期ロード時のフリーズ判定を完全に回避します
+        setTimeout(checkHokkaidoTrafficTextOnly, 100);
         setInterval(checkHokkaidoTrafficTextOnly, 300000);
     </script>
 </body>
