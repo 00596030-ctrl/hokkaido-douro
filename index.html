@@ -39,7 +39,7 @@
 
         #status-text {
             font-size: 13px;
-            color: #22C55E;
+            color: #E2E8F0;
             margin: 2px 0 0 0;
             font-weight: bold;
         }
@@ -48,8 +48,9 @@
             display: flex;
             gap: 15px;
             width: 100%;
-            height: calc(100vh - 65px); 
+            height: calc(100vh - 165px); 
             box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         .board-container {
@@ -60,7 +61,15 @@
             border-radius: 16px;
             padding: 18px;
             box-sizing: border-box;
-            width: 100%; 
+        }
+
+        .info-left {
+            width: 70%;
+        }
+
+        .stream-right {
+            width: 30%;
+            gap: 10px; 
         }
 
         .board-title {
@@ -72,6 +81,7 @@
             padding-bottom: 6px;
             display: flex;
             justify-content: space-between;
+            flex-shrink: 0;
         }
 
         .board-content {
@@ -84,6 +94,25 @@
             position: relative;
         }
 
+        /* 📊 ログ画面を復活させるための分割枠レイアウト */
+        .log-half-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .log-scroll-area {
+            flex: 1;
+            background-color: #000000;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #1E293B;
+            overflow-y: auto;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
         #scroll-inner-container {
             position: absolute;
             width: calc(100% - 30px);
@@ -92,12 +121,12 @@
         }
 
         .alert-item {
-            font-size: 20px; 
-            line-height: 1.7;
+            font-size: 18px;
+            line-height: 1.6;
             margin-bottom: 15px;
-            padding: 15px 20px;
+            padding: 12px 18px;
             border-radius: 8px;
-            border-left: 8px solid #EF4444;
+            border-left: 6px solid #EF4444;
             background-color: rgba(239, 68, 68, 0.1);
         }
         
@@ -115,11 +144,29 @@
 
         .no-alert {
             color: #22C55E;
-            font-size: 26px;
+            font-size: 22px;
             font-weight: bold;
             text-align: center;
             margin-top: 150px;
             line-height: 1.8;
+        }
+
+        #log-live-communication {
+            color: #38BDF8;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        #log-raw-json {
+            color: #4ADE80;
+            font-family: monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            margin: 0;
+            white-space: pre;
         }
 
         .ticker-container {
@@ -182,7 +229,8 @@
     </div>
 
     <div class="main-dashboard-layout">
-        <div class="board-container">
+        
+        <div class="board-container info-left">
             <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（同期中）</span></p>
             <div id="scroll-outer-box" class="board-content">
                 <div id="scroll-inner-container">
@@ -190,6 +238,18 @@
                 </div>
             </div>
         </div>
+
+        <div class="board-container stream-right">
+            <div class="log-half-box">
+                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">📡 ① 内部ファイル同期ログ</p>
+                <pre id="log-live-communication" class="log-scroll-area">初期化中...</pre>
+            </div>
+            <div class="log-half-box">
+                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 読み込んだ生のJARTICデータ（JSON）</p>
+                <pre id="log-raw-json" class="log-scroll-area">（データ待機中...）</pre>
+            </div>
+        </div>
+
     </div>
 
     <div class="ticker-container">
@@ -201,21 +261,38 @@
 
     <script>
         let scrollTimer = null; 
+        const commLogBox = document.getElementById("log-live-communication");
+        const jsonBackupBox = document.getElementById("log-raw-json");
+
+        function writeCommLog(message) {
+            const now = new Date();
+            const timestamp = `[${now.toLocaleTimeString()}] `;
+            commLogBox.innerText += "\n" + timestamp + message;
+            commLogBox.scrollTop = commLogBox.scrollHeight;
+        }
 
         function checkHokkaidoTrafficTextOnly() {
+            writeCommLog("=== セキュア同期確認スタート ===");
+            writeCommLog("[1/1] GitHubサーバー内の data.json の読み込みを開始...");
+
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
             fetch(jsonUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("データ未生成");
+                    if (!response.ok) throw new Error("data.jsonが見つかりません。Actionsが未実行の可能性があります。");
+                    writeCommLog("➡ 成功：最新のデータファイルをキャッチしました！");
                     return response.json();
                 })
                 .then(jsonData => {
+                    writeCommLog("🟢 ダウンロード完了。これから地名仕分けに入ります。");
+                    
+                    // 下のボックスに生データを表示して目視確認できるようにする
+                    jsonBackupBox.innerText = JSON.stringify(jsonData, null, 2);
+
                     updateControlBoard(jsonData);
                 })
                 .catch(error => {
-                    console.error(error);
-                    document.getElementById("live-clock-tag").innerText = "（データ配信待機中）";
+                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
                 });
         }
 
@@ -229,26 +306,25 @@
             let closedCount = 0; 
             let constCount = 0;  
 
-            // 🛠️ 漏れを一切無くすため、北広島、大谷地、長流枝、札樽道の全IC地名を徹底網羅！
             const targetKeywords = [
-                // 深川留萌・帯広広尾・旭川紋別・名寄美深
                 "深川西", "秩父別", "沼田", "北竜ひまわり", 
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
-                // 道央道（大沼〜士別剣淵までの重要IC・PAを大補強）
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌南", "大谷地", "札幌IC", "江別西", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
-                // 道東道（長流枝、音更帯広方面を大補強）
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", "長流枝", "音更帯広", "池田",
-                // 札樽道（小樽〜札幌間を1文字残さず完全網羅）
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "札幌北第二", "伏古", "雁来"
             ];
+
+            let scanCount = 0;
+            let matchCount = 0;
 
             if (jsonData.features && Array.isArray(jsonData.features)) {
                 jsonData.features.forEach(feature => {
                     const props = feature.properties;
                     if (!props) return;
+                    scanCount++;
 
                     let rdText = props.rd || ""; 
                     let cText = props.c || "";   
@@ -262,6 +338,7 @@
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword));
 
                     if (isHit) {
+                        matchCount++;
                         let routeName = "管轄高速・専用道";
                         if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜")) routeName = "深川留萌自動車道";
                         else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹")) routeName = "帯広広尾自動車道";
@@ -280,7 +357,9 @@
                 });
             }
 
-            // 特殊区間補正（保険用）
+            writeCommLog(`🔍 仕分け結果: 全${scanCount}件中、北海道の対象地名に${matchCount}件ヒットしました。`);
+
+            // 特殊補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川留萌"))) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -325,7 +404,7 @@
             if (closedCount > 0) {
                 tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
             } else {
-                tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`);
+                tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順順調）。`);
             }
             if (constCount > 0) tickerParts.push(`【工事規制】各路線において車線規制・維持補修作業が計 ${constCount} 件実施されています。スピードを落として安全に通行してください。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
@@ -368,6 +447,8 @@
             }, 2000); 
         }
 
+        // 起動
+        writeCommLog("システム初期化完了。セキュアログ監視システムを起動しました。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
