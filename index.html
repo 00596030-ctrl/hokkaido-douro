@@ -187,11 +187,12 @@
             border-bottom: none;
         }
         .weather-highlight {
-            color: #F43F5E; 
+            color: #38BDF8; 
             font-weight: bold;
         }
         .accident-highlight {
             color: #FBBF24; 
+            font-weight: bold;
         }
 
         .ticker-container {
@@ -271,18 +272,18 @@
 
         <div class="board-container stream-right">
             <div class="yahoo-half-box">
-                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">🌦️ ① Yahoo!天気・災害情報（ローカル同期）</p>
+                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">🌦️ ① Yahoo!天気・災害情報（北海道）</p>
                 <div id="weather-outer-box" class="yahoo-scroll-area">
                     <div id="weather-inner-container" class="yahoo-inner-container">
-                        <div class="yahoo-text-item">🌦️ 気象災害情報を同期中...</div>
+                        <div class="yahoo-text-item">🌦️ 気象情報を読み込み中...</div>
                     </div>
                 </div>
             </div>
             <div class="yahoo-half-box">
-                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">🚘 ② Yahoo!ニュース（事故交通安全・ローカル同期）</p>
+                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">🚘 ② Yahoo!ニュース（交通事故・気象・災害災害）</p>
                 <div id="accident-outer-box" class="yahoo-scroll-area">
                     <div id="accident-inner-container" class="yahoo-inner-container">
-                        <div class="yahoo-text-item">🚘 交通事故トピックスを同期中...</div>
+                        <div class="yahoo-text-item">🚘 道路影響ニュースを読み込み中...</div>
                     </div>
                 </div>
             </div>
@@ -301,37 +302,52 @@
         let scrollTimer = null; 
         let weatherTimer = null; 
         let accidentTimer = null; 
-        
         let cachedTickerYahooNews = []; 
 
-        // 🛠️ 改良：外部に頼らず、手元に自動保存された xml ファイルを直接開く（100%確実）
+        // 安全最優先構造：すべての処理を道連れにしないカプセルに隔離
+        function checkHokkaidoTrafficTextOnly() {
+            // 1. 【最重要・最優先】何が起きてもJARTIC交通情報を最初に確実に動かす
+            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
+            fetch(jsonUrl)
+                .then(response => { if (!response.ok) throw new Error(); return response.json(); })
+                .then(jsonData => { updateControlBoard(jsonData); })
+                .catch(error => { console.log("Traffic data processing bypass."); });
+
+            // 2. 隔離された部屋で天気をロード
+            setTimeout(loadLocalYahooWeather, 200);
+
+            // 3. 隔離された部屋で道路関係ニュースをロード
+            setTimeout(loadLocalYahooNews, 400);
+        }
+
         function loadLocalYahooWeather() {
             const xmlUrl = `./yahoo_weather.xml?t=${new Date().getTime()}`;
             fetch(xmlUrl)
-                .then(res => { if(!res.ok) throw new Error(); return res.text(); })
+                .then(res => res.text())
                 .then(xmlText => {
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlText, "text/xml");
                     const items = xmlDoc.getElementsByTagName("item");
                     
                     let htmlParts = [];
-                    for (let i = 0; i < Math.min(items.length, 12); i++) {
-                        const title = items[i].getElementsByTagName("title")[0].textContent;
-                        htmlParts.push(`<div class="yahoo-text-item"><span class="weather-highlight">⚠️【気象・防災】</span>${title}</div>`);
+                    for (let i = 0; i < items.length; i++) {
+                        try {
+                            const title = items[i].getElementsByTagName("title")[0].textContent;
+                            htmlParts.push(`<div class="yahoo-text-item"><span class="weather-highlight">🌦️【防災・天気】</span>${title}</div>`);
+                        } catch(e){}
                     }
                     if(htmlParts.length > 0) {
                         document.getElementById("weather-inner-container").innerHTML = htmlParts.join("");
                         startDynamicYahooScroll("weather-outer-box", "weather-inner-container", "weather");
                     }
                 })
-                .catch(err => { console.log("Weather log syncing..."); });
+                .catch(err => { console.log("Weather parse error safe bypass."); });
         }
 
-        // 🛠️ 改良：事故ニュースも手元のファイルを直接開く
         function loadLocalYahooNews() {
             const xmlUrl = `./yahoo_news.xml?t=${new Date().getTime()}`;
             fetch(xmlUrl)
-                .then(res => { if(!res.ok) throw new Error(); return res.text(); })
+                .then(res => res.text())
                 .then(xmlText => {
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlText, "text/xml");
@@ -339,30 +355,30 @@
                     
                     let htmlParts = [];
                     let tickerTexts = [];
-                    for (let i = 0; i < Math.min(items.length, 12); i++) {
-                        const title = items[i].getElementsByTagName("title")[0].textContent;
-                        htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚘【社会・事故】</span>${title}</div>`);
-                        tickerTexts.push(`【Yahoo!ニュース速報】${title}`);
+                    
+                    // 🛠️ 政治ニュースを除外するための、道路に直接関わるキーワードフィルター
+                    const trafficKeywords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行止", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "新幹線", "JR"];
+
+                    for (let i = 0; i < items.length; i++) {
+                        try {
+                            const title = items[i].getElementsByTagName("title")[0].textContent;
+                            
+                            // キーワードが1つでも入っているものだけを厳選（政治・皇室ニュースは自動的に捨てられます）
+                            let isTrafficRelated = trafficKeywords.some(key => title.includes(key));
+                            
+                            if (isTrafficRelated || htmlParts.length < 3) { // 枯渇防止用の最低限のセーフティ
+                                htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚨【道路ニュース】</span>${title}</div>`);
+                                tickerTexts.push(`【Yahoo!ニュース】${title}`);
+                            }
+                        } catch(e){}
                     }
+                    
                     if(htmlParts.length > 0) {
                         document.getElementById("accident-inner-container").innerHTML = htmlParts.join("");
                         cachedTickerYahooNews = tickerTexts;
                     }
                 })
-                .catch(err => { console.log("News log syncing..."); });
-        }
-
-        function checkHokkaidoTrafficTextOnly() {
-            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
-
-            // 1分ごとの定期巡回時に、手元の天気とニュースファイルも一緒に連動ロードする
-            loadLocalYahooWeather();
-            loadLocalYahooNews();
-
-            fetch(jsonUrl)
-                .then(response => { if (!response.ok) throw new Error(); return response.json(); })
-                .then(jsonData => { updateControlBoard(jsonData); })
-                .catch(error => { console.log("Traffic data waiting..."); });
+                .catch(err => { console.log("News parse error safe bypass."); });
         }
 
         function updateControlBoard(jsonData) {
@@ -423,7 +439,6 @@
                 });
             }
 
-            // 特殊区間補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
                 redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -490,7 +505,7 @@
             }, 2000); 
         }
 
-        // 🎬 右側Yahoo：「読むスピード」のゆったりエンジン（0.3px移動）
+        // 右側Yahoo専用：ゆったり読むスピード（0.3pxずつ）
         function startDynamicYahooScroll(outerId, innerId, type) {
             let timerName = type === "weather" ? weatherTimer : accidentTimer;
             if (timerName) clearInterval(timerName);
@@ -512,7 +527,7 @@
             }, 4000); 
         }
 
-        // 初回起動＆1分毎のJARTIC連動ロード
+        // 1分毎に全データを完全に独立連動ロード
         setInterval(checkHokkaidoTrafficTextOnly, 60000);
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
