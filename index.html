@@ -110,7 +110,7 @@
             overflow-y: auto;
             margin: 0;
             box-sizing: border-box;
-            position: relative; /* スクロール枠の基準化 */
+            position: relative;
         }
 
         #scroll-inner-container {
@@ -120,7 +120,6 @@
             transition: top 0.3s ease-out; 
         }
 
-        /* 🛠️ 右下JSON用の絶対配置スクロールコンテナ */
         #log-raw-json-container {
             position: absolute;
             width: calc(100% - 24px);
@@ -267,13 +266,13 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。</div>
+            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を 24 時間リアルタイム巡航中。</div>
         </div>
     </div>
 
     <script>
         let scrollTimer = null; 
-        let jsonScrollTimer = null; // 🛠️ 右下専用のタイマー枠を新設
+        let jsonScrollTimer = null; 
         const commLogBox = document.getElementById("log-live-communication");
         const jsonBackupBox = document.getElementById("log-raw-json");
 
@@ -300,8 +299,6 @@
                     jsonBackupBox.innerText = JSON.stringify(jsonData, null, 2);
                     
                     updateControlBoard(jsonData);
-                    
-                    // 🛠️ データの読み込み完了後、右下の自動スクロールを連動開始
                     startRightLogJsonScroll();
                 })
                 .catch(error => {
@@ -453,7 +450,7 @@
             }
         }
 
-        // 🎬 左側：メイン掲示板スクロール
+        // 左側：メイン掲示板スクロール
         function startAutoScrollEngine() {
             if (scrollTimer) clearInterval(scrollTimer);
             const outerBox = document.getElementById("scroll-outer-box");
@@ -481,41 +478,36 @@
             }, 2000); 
         }
 
-        // 🎬 🛠️ 右側：ジェイソンデータ（JSON）専用の超滑らか自動縦スクロールエンジン
+        // 🛠️ 右側：縦スクロールスピードを「ジャスト2倍速」へ大増速！
         function startRightLogJsonScroll() {
             if (jsonScrollTimer) clearInterval(jsonScrollTimer);
             
             const outerBox = document.getElementById("log-json-outer-box");
             const innerBox = document.getElementById("log-raw-json-container");
-            innerBox.style.top = "12px"; // 初期位置リセット
+            innerBox.style.top = "12px"; 
             
-            // データが書き換わって高さを認識するまで少し待つ
             setTimeout(() => {
                 const outerHeight = outerBox.clientHeight;
                 const innerHeight = innerBox.clientHeight;
                 
-                // 生データの中身が枠より大きい場合のみスクロール開始
                 if (innerHeight > outerHeight - 24) {
                     let currentTop = 12;
-                    // 一番下までスクロールしきる限界点を算出
                     const maxScroll = -(innerHeight - outerHeight + 30);
                     
                     jsonScrollTimer = setInterval(() => {
-                        currentTop -= 0.5; // 0.5ピクセルずつ動かすことで、非常にゆったりとした読みやすい速度に調整
+                        currentTop -= 1.0; // 🛠️ 0.5 から 1.0 に変更（移動速度をキッチリ2倍に高速化）
                         innerBox.style.top = currentTop + "px";
                         
-                        // 一番下まで到着したら
                         if (currentTop <= maxScroll) {
                             clearInterval(jsonScrollTimer);
-                            // 3秒間その場で余韻を持たせて停止
                             setTimeout(() => {
-                                innerBox.style.top = "12px"; // パッと上に戻る
-                                setTimeout(startRightLogJsonScroll, 1000); // 1秒静止したあと再ループ
-                            }, 3000);
+                                innerBox.style.top = "12px"; 
+                                setTimeout(startRightLogJsonScroll, 1000); 
+                            }, 3000); // 下での静止時間は変わらず3秒維持
                         }
-                    }, 35); // 更新間隔を短くしてカタカタ感を無くし、ヌルヌル動かします
+                    }, 35); 
                 }
-            }, 3000); // 起動時も3秒間トップで静止して読ませる
+            }, 2000); // 最初の上の待ち時間を3秒から2秒に短縮してテンポを良くしました
         }
 
         writeCommLog("システム初期化完了。152拠点マスター＆右ログ縦巡航エンジン稼働。");
