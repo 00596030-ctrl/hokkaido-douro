@@ -336,18 +336,18 @@
                 });
             }
 
-            // 固定補正
+            // 🛠️ 改善：生データ側にすでに同じ地名ペアが存在する場合は、重複して一括作成させないガードロックを搭載
             const rawText = JSON.stringify(jsonData);
-            if (rawText.includes("深川西") && rawText.includes("北竜")) {
+            if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川西") && a.text.includes("北竜"))) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
             }
-            if ((rawText.includes("占冠") || rawText.includes("占跨") || rawText.includes("占観")) && rawText.includes("追分")) {
+            if ((rawText.includes("占冠") || rawText.includes("占跨") || rawText.includes("占観")) && (rawText.includes("追分")) && !rawAlerts.some(a => a.text.includes("占冠") && a.text.includes("追分"))) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
             }
-            if (rawText.includes("大沼") && rawText.includes("落部")) {
+            if (rawText.includes("大沼") && rawText.includes("落部") && !rawAlerts.some(a => a.text.includes("大沼") && a.text.includes("落部"))) {
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
-            if (rawText.includes("トマム") && rawText.includes("清水")) {
+            if (rawText.includes("トマム") && rawText.includes("清水") && !rawAlerts.some(a => a.text.includes("トマム") && a.text.includes("清水"))) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
 
@@ -359,8 +359,8 @@
                 if (seenTexts.has(item.text)) return;
 
                 let geoTokens = [];
-                // 🛠️ 修正：スキャン用の地名キーワードリストに「トマム」と「十勝清水」を確実に追加！これで重複カードを100%抹殺します。
-                ["深川西", "秩父別", "沼田", "北竜ひまわり", "川西", "幸福", "中札内", "更別", "忠類", "大樹", "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "名寄", "智恵文", "美深", "音威子府", "大沼", "落部", "占冠", "占跨", "占観", "トマム", "十勝清水", "追分", "白老", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "野幌"].forEach(kw => {
+                // 🛠️ 修正：重複検知キーワードに「江別東」と「追分町」を確実に追加！これでダブりを完全に抹殺します。
+                ["深川西", "秩父別", "沼田", "北竜ひまわり", "川西", "幸福", "中札内", "更別", "忠類", "大樹", "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "名寄", "智恵文", "美深", "音威子府", "大沼", "落部", "占冠", "占跨", "占観", "トマム", "十勝清水", "追分", "追分町", "白老", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "野幌"].forEach(kw => {
                     if (item.text.includes(kw)) geoTokens.push(kw);
                 });
 
@@ -428,10 +428,8 @@
             }, 2000); 
         }
 
-        // 初回読み込み
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
-        // 45秒の自爆リフレッシュ（キャッシュ完全破壊ロジック）
         setTimeout(function() {
             const nextVersion = new Date().getTime();
             window.location.href = window.location.pathname + "?v=" + nextVersion;
