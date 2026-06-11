@@ -22,5 +22,5 @@ jobs:
         git config --local user.name "GitHub Action"
         git status
         git add data.json
-        git commit -m "【自動管制】JARTIC単独・鉄壁のリアルタイム同期完了" || exit 0
+        git commit -m "【自動管制】ヤフー完全排除・JARTIC単独の安全ルートへ復旧" || exit 0
         git push
