@@ -280,7 +280,7 @@
                 </div>
             </div>
             <div class="yahoo-half-box">
-                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">🚘 ② Yahoo!ニュース（交通事故・気象・災害災害）</p>
+                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">🚘 ② Yahoo!ニュース（交通事故・気象・災害）</p>
                 <div id="accident-outer-box" class="yahoo-scroll-area">
                     <div id="accident-inner-container" class="yahoo-inner-container">
                         <div class="yahoo-text-item">🚘 道路影響ニュースを読み込み中...</div>
@@ -304,19 +304,16 @@
         let accidentTimer = null; 
         let cachedTickerYahooNews = []; 
 
-        // 安全最優先構造：すべての処理を道連れにしないカプセルに隔離
         function checkHokkaidoTrafficTextOnly() {
-            // 1. 【最重要・最優先】何が起きてもJARTIC交通情報を最初に確実に動かす
+            // 最重要：JARTICのデータを最優先で叩き出す
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
             fetch(jsonUrl)
                 .then(response => { if (!response.ok) throw new Error(); return response.json(); })
                 .then(jsonData => { updateControlBoard(jsonData); })
                 .catch(error => { console.log("Traffic data processing bypass."); });
 
-            // 2. 隔離された部屋で天気をロード
+            // 天気と事故ニュースを時間差で完全自立ロード
             setTimeout(loadLocalYahooWeather, 200);
-
-            // 3. 隔離された部屋で道路関係ニュースをロード
             setTimeout(loadLocalYahooNews, 400);
         }
 
@@ -341,7 +338,7 @@
                         startDynamicYahooScroll("weather-outer-box", "weather-inner-container", "weather");
                     }
                 })
-                .catch(err => { console.log("Weather parse error safe bypass."); });
+                .catch(err => { console.log("Weather parse bypass."); });
         }
 
         function loadLocalYahooNews() {
@@ -356,29 +353,33 @@
                     let htmlParts = [];
                     let tickerTexts = [];
                     
-                    // 🛠️ 政治ニュースを除外するための、道路に直接関わるキーワードフィルター
-                    const trafficKeywords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行止", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "新幹線", "JR"];
+                    // 🛠️ 鉄壁の超厳選フィルター（これらが入っていない「政治」「芸能」は完全にシュレッダーにかけます）
+                    const targetTrafficWords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行止", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "トラック", "乗用車", "ひき逃げ", "追突", "横転"];
 
                     for (let i = 0; i < items.length; i++) {
                         try {
                             const title = items[i].getElementsByTagName("title")[0].textContent;
                             
-                            // キーワードが1つでも入っているものだけを厳選（政治・皇室ニュースは自動的に捨てられます）
-                            let isTrafficRelated = trafficKeywords.some(key => title.includes(key));
+                            // 道路関係の言葉が含まれているか完全チェック
+                            let isRealTrafficNews = targetTrafficWords.some(key => title.includes(key));
                             
-                            if (isTrafficRelated || htmlParts.length < 3) { // 枯渇防止用の最低限のセーフティ
+                            if (isRealTrafficNews) {
                                 htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚨【道路ニュース】</span>${title}</div>`);
                                 tickerTexts.push(`【Yahoo!ニュース】${title}`);
                             }
                         } catch(e){}
                     }
                     
-                    if(htmlParts.length > 0) {
-                        document.getElementById("accident-inner-container").innerHTML = htmlParts.join("");
-                        cachedTickerYahooNews = tickerTexts;
+                    // 🛠️ 万が一、事故ニュースが0件のクリーンな時間帯は、案内文を出してフリーズを防ぐ
+                    if (htmlParts.length === 0) {
+                        htmlParts.push(`<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、Yahoo!ニュース上に広域運行に直結する重大な事故・災害速報はありません。</div>`);
                     }
+                    
+                    document.getElementById("accident-inner-container").innerHTML = htmlParts.join("");
+                    cachedTickerYahooNews = tickerTexts;
+                    startDynamicYahooScroll("accident-outer-box", "accident-inner-container", "accident");
                 })
-                .catch(err => { console.log("News parse error safe bypass."); });
+                .catch(err => { console.log("News parse bypass."); });
         }
 
         function updateControlBoard(jsonData) {
@@ -400,7 +401,7 @@
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "伏古", "雁来", "小樽IC", "小樽JCT", "張碓", "金山", "札幌西", "張碓PA", "金山PA",
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", 
                 "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "千歳恵庭JCT", "キウス", "由仁", "むかわ穂別", "十勝平原", "帯広JCT", "上浦幌", "釧路西", "大楽毛",
-                "由仁PA", "むかわ穂別PA", "占冠PA", "十勝平原SA", "長流枝PA",
+                "任PA", "むかわ穂別PA", "占冠PA", "十勝平原SA", "長流枝PA",
                 "深川西", "秩父別", "沼田", "北竜ひまわり", "留萌大和田", "留萌", "幌糠",
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "旭川紋別", "上川天幕", "上川層雲峡", "奥白滝",
                 "沼ノ端", "苫東中央", "厚真", "鵡川", "汐見", "富川", "日高富川", "門別", "日高門別",
@@ -437,17 +438,6 @@
                         if (rdText.includes("通行止")) { redAlerts.push({ text: detailText }); } else { yellowAlerts.push({ text: detailText }); }
                     }
                 });
-            }
-
-            const rawText = JSON.stringify(jsonData);
-            if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
-                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
-            }
-            if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
-                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
-            }
-            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
-                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
 
             let finalRedHTMLs = []; let finalYellowHTMLs = []; let seenTexts = new Set(); let seenRouteGeoKeys = new Set();
@@ -505,7 +495,6 @@
             }, 2000); 
         }
 
-        // 右側Yahoo専用：ゆったり読むスピード（0.3pxずつ）
         function startDynamicYahooScroll(outerId, innerId, type) {
             let timerName = type === "weather" ? weatherTimer : accidentTimer;
             if (timerName) clearInterval(timerName);
@@ -527,7 +516,6 @@
             }, 4000); 
         }
 
-        // 1分毎に全データを完全に独立連動ロード
         setInterval(checkHokkaidoTrafficTextOnly, 60000);
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
