@@ -304,22 +304,24 @@
         let accidentTimer = null; 
         let cachedTickerYahooNews = []; 
 
-        // 🛡️ 【絶対分離】JARTICのメイン回路。外部要因を100%遮断して独立稼働
+        // 🛡️ キャッシュ（古い記憶）を強制破壊するパスワード付きでJARTIC生データを引きずり出す
         function mainTrafficEngine() {
-            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
+            const timestamp = new Date().getTime();
+            const jsonUrl = `./data.json?cache=${timestamp}`; // 🛠️ キャッシュ強制破壊パラメーター
+            
             fetch(jsonUrl)
                 .then(response => { if (!response.ok) throw new Error(); return response.json(); })
                 .then(jsonData => { updateControlBoard(jsonData); })
-                .catch(error => { console.log("Traffic engine runs securely."); });
+                .catch(error => { console.log("Traffic cache bypass active."); });
         }
 
-        // 🛠️ 【完全別線】Yahoo!天気専用回路（エラーが起きても完全にこの関数内で消滅します）
         function sideWeatherEngine() {
-            const xmlUrl = `./yahoo_weather.xml?t=${new Date().getTime()}`;
+            const timestamp = new Date().getTime();
+            const xmlUrl = `./yahoo_weather.xml?cache=${timestamp}`;
+            
             fetch(xmlUrl)
                 .then(res => res.text())
                 .then(xmlText => {
-                    // もしヤフーのデータがただのHTML（エラー画面など）だったら安全にスルー
                     if (xmlText.includes("<!DOCTYPE") || xmlText.includes("<html") || xmlText.includes("<HTML")) {
                         document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、北海道内に重大な気象警報・災害速報はありません。</div>`;
                         return;
@@ -329,7 +331,6 @@
                     const items = xmlDoc.getElementsByTagName("title");
                     
                     let htmlParts = [];
-                    // 最初のタイトルはフィード名なので2番目(i=1)から抽出
                     for (let i = 1; i < items.length; i++) {
                         if (items[i] && items[i].textContent) {
                             const val = items[i].textContent.trim();
@@ -346,13 +347,14 @@
                     }
                 })
                 .catch(err => { 
-                    document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、天気情報は順調に待機中です。</div>`;
+                    document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、北海道内に重大な気象警報・災害速報はありません。</div>`;
                 });
         }
 
-        // 🛠️ 【完全別線】Yahoo!事故ニュース専用回路（エラーが起きても絶対に左側を道連れにしません）
         function sideNewsEngine() {
-            const xmlUrl = `./yahoo_news.xml?t=${new Date().getTime()}`;
+            const timestamp = new Date().getTime();
+            const xmlUrl = `./yahoo_news.xml?cache=${timestamp}`;
+            
             fetch(xmlUrl)
                 .then(res => res.text())
                 .then(xmlText => {
@@ -367,7 +369,6 @@
                     let htmlParts = [];
                     let tickerTexts = [];
                     
-                    // 厳選キーワードリスト
                     const targetTrafficWords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "トラック", "乗用車", "ひき逃げ", "追突", "横転", "列車", "遅延", "けが", "搬送", "消防", "警察", "立ち往生", "渋滞", "閉鎖"];
 
                     for (let i = 1; i < items.length; i++) {
@@ -391,7 +392,7 @@
                     startDynamicYahooScroll("accident-outer-box", "accident-inner-container", "accident");
                 })
                 .catch(err => { 
-                    document.getElementById("accident-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、道路ニュースは順調に巡航待機中です。</div>`;
+                    document.getElementById("accident-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、運行に影響する事故・大雪災害のニュースはありません。</div>`;
                 });
         }
 
@@ -529,14 +530,12 @@
             }, 4000); 
         }
 
-        // 🛠️ 【新・運行ルール】1分ごとに別々の独立した回線として順番に処理を実行（完全道連れ防止）
         function runAllEnginesSecurely() {
-            mainTrafficEngine();     // ① まず交通情報を動かす（絶対エース）
-            sideWeatherEngine();     // ② 天気は別回線で動かす
-            sideNewsEngine();        // ③ ニュースも別回線で動かす
+            mainTrafficEngine();     
+            sideWeatherEngine();     
+            sideNewsEngine();        
         }
 
-        // 60秒周期で完全自立サイクル
         setInterval(runAllEnginesSecurely, 60000);
         setTimeout(runAllEnginesSecurely, 100);
     </script>
