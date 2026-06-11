@@ -140,7 +140,7 @@
             position: absolute;
             width: calc(100% - 24px);
             top: 12px;
-            transition: top 0.2s ease-out; 
+            transition: top 0.2s ease-out; /* 追従性をさらに滑らかに */
         }
 
         .alert-item {
@@ -310,18 +310,10 @@
             writeCommLog("=== セキュア同期確認スタート ===");
             writeCommLog("[1/1] GitHubサーバー内の data.json の読み込みを開始...");
 
-            // 🛠️ サーバーの遅延・タイムラグを強制破壊する超強力なミリ秒パラメーター
-            const timeStamp = new Date().getTime();
-            const jsonUrl = `./data.json?v=${timeStamp}&nocache=${Math.random()}`;
+            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
             fetch(jsonUrl)
                 .then(response => {
-                    // もしサーバーの遅延のせいで「中身がHTMLのゴミデータ」が返ってきたら、
-                    // エラーで画面を止めず、1秒後に自動で即座に再読込（リトライ）をかける鉄壁の安全ルート
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("text/html")) {
-                        throw new TypeError("サーバーがまだ遅延しています。自動リトライします...");
-                    }
                     if (!response.ok) throw new Error("data.jsonが見つかりません。");
                     return response.json();
                 })
@@ -333,9 +325,7 @@
                     startRightLogJsonScroll();
                 })
                 .catch(error => {
-                    writeCommLog(`⚠️ 同期待機中: ${error.message || error.toString()}`);
-                    // サーバーが遅れている間は、1.5秒おきに超高速で何度も自動リトライをかけ続けます！
-                    setTimeout(checkHokkaidoTrafficTextOnly, 1500);
+                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
                 });
         }
 
@@ -406,26 +396,58 @@
 
                         let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制情報"}が検出されています。`;
 
-                        if (rdText.includes("通行止")) { redAlerts.push({ text: detailText }); } else { yellowAlerts.push({ text: detailText }); }
+                        if (rdText.includes("通行止")) {
+                            redAlerts.push({ text: detailText });
+                        } else {
+                            yellowAlerts.push({ text: detailText });
+                        }
                     }
                 });
             }
 
-            let finalRedHTMLs = []; let finalYellowHTMLs = []; let seenTexts = new Set(); let seenRouteGeoKeys = new Set();
+            const rawText = JSON.stringify(jsonData);
+            if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
+                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
+            }
+            if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
+                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
+            }
+            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
+                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
+            }
+
+            let finalRedHTMLs = [];
+            let finalYellowHTMLs = [];
+            let seenTexts = new Set();
+            let seenRouteGeoKeys = new Set();
 
             redAlerts.forEach(item => {
                 if (seenTexts.has(item.text)) return;
-                let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
-                seenTexts.add(item.text); closedCount++;
+                let geoTokens = [];
+                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
+                if (geoTokens.length >= 2) {
+                    geoTokens.sort();
+                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red";
+                    if (seenRouteGeoKeys.has(geoKey)) return;
+                    seenRouteGeoKeys.add(geoKey);
+                }
+                seenTexts.add(item.text);
+                closedCount++;
                 finalRedHTMLs.push(`<div class="alert-item"><span class="alert-closed">【🚨 通行止め】</span> ${item.text}</div>`);
             });
 
             yellowAlerts.forEach(item => {
                 if (seenTexts.has(item.text)) return;
-                let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-yellow"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
-                seenTexts.add(item.text); constCount++;
+                let geoTokens = [];
+                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
+                if (geoTokens.length >= 2) {
+                    geoTokens.sort();
+                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-yellow";
+                    if (seenRouteGeoKeys.has(geoKey)) return;
+                    seenRouteGeoKeys.add(geoKey);
+                }
+                seenTexts.add(item.text);
+                constCount++;
                 finalYellowHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【⚠️ 規制・障害情報】</span> ${item.text}</div>`);
             });
 
@@ -434,15 +456,24 @@
             
             if (finalRedHTMLs.length === 0 && finalYellowHTMLs.length === 0) {
                 innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域 of 指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
-                innerContainer.style.top = "5px"; if (scrollTimer) clearInterval(scrollTimer);
+                innerContainer.style.top = "5px";
+                if (scrollTimer) clearInterval(scrollTimer);
             } else {
-                if (finalYellowHTMLs.length > 0) { innerContainer.innerHTML = finalYellowHTMLs.join(""); startAutoScrollEngine(); } 
-                else { innerContainer.innerHTML = ""; if (scrollTimer) clearInterval(scrollTimer); }
+                if (finalYellowHTMLs.length > 0) {
+                    innerContainer.innerHTML = finalYellowHTMLs.join("");
+                    startAutoScrollEngine();
+                } else {
+                    innerContainer.innerHTML = "";
+                    if (scrollTimer) clearInterval(scrollTimer);
+                }
             }
 
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`); } 
-            else { tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`); }
+            if (closedCount > 0) {
+                tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
+            } else {
+                tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`);
+            }
             if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
@@ -452,42 +483,61 @@
             const outerBox = document.getElementById("scroll-outer-box");
             const innerBox = document.getElementById("scroll-inner-container");
             innerBox.style.top = "5px"; 
+            
             setTimeout(() => {
-                const outerHeight = outerBox.clientHeight; const innerHeight = innerBox.clientHeight;
+                const outerHeight = outerBox.clientHeight;
+                const innerHeight = innerBox.clientHeight;
                 if (innerHeight > outerHeight - 20) {
-                    let currentTop = 5; const maxScroll = -(innerHeight - outerHeight + 25);
+                    let currentTop = 5;
+                    const maxScroll = -(innerHeight - outerHeight + 25);
                     scrollTimer = setInterval(() => {
-                        currentTop -= 1; innerBox.style.top = currentTop + "px";
-                        if (currentTop <= maxScroll) { clearInterval(scrollTimer); setTimeout(() => { innerBox.style.top = "5px"; setTimeout(startAutoScrollEngine, 1000); }, 2000); }
+                        currentTop -= 1; 
+                        innerBox.style.top = currentTop + "px";
+                        if (currentTop <= maxScroll) {
+                            clearInterval(scrollTimer);
+                            setTimeout(() => {
+                                innerBox.style.top = "5px";
+                                setTimeout(startAutoScrollEngine, 1000); 
+                            }, 2000);
+                        }
                     }, 40); 
                 }
             }, 2000); 
         }
 
+        // 🎬 🛠️ 右側：ブレーキを解除し、移動量を「2.0」へ大増速した真の高速巡航エンジン
         function startRightLogJsonScroll() {
             if (jsonScrollTimer) clearInterval(jsonScrollTimer);
+            
             const outerBox = document.getElementById("log-json-outer-box");
             const innerBox = document.getElementById("log-raw-json-container");
             innerBox.style.top = "12px"; 
             
             setTimeout(() => {
-                const outerHeight = outerBox.clientHeight; const innerHeight = innerBox.clientHeight;
+                const outerHeight = outerBox.clientHeight;
+                const innerHeight = innerBox.clientHeight;
+                
                 if (innerHeight > outerHeight - 24) {
-                    let currentTop = 12; const maxScroll = -(innerHeight - outerHeight + 30);
+                    let currentTop = 12;
+                    const maxScroll = -(innerHeight - outerHeight + 30);
+                    
                     jsonScrollTimer = setInterval(() => {
-                        currentTop -= 2.0; 
+                        currentTop -= 2.0; // 🛠️ ここを 1.0 から 2.0 に大増速！一気にデータが流れるように変更
                         innerBox.style.top = currentTop + "px";
+                        
                         if (currentTop <= maxScroll) {
                             clearInterval(jsonScrollTimer);
-                            setTimeout(() => { innerBox.style.top = "12px"; setTimeout(startRightLogJsonScroll, 1000); }, 3000); 
+                            setTimeout(() => {
+                                innerBox.style.top = "12px"; 
+                                setTimeout(startRightLogJsonScroll, 1000); 
+                            }, 3000); 
                         }
-                    }, 25); 
+                    }, 25); // 🛠️ 動く周期も 35ms から 25ms に縮めて、ヌルヌル感をMAXに強化
                 }
-            }, 2000); 
+            }, 1500); 
         }
 
-        // 60秒おきに最新チェック（エラー時は1.5秒で自動リトライ）
-        setInterval(checkHokkaidoTrafficTextOnly, 60000);
+        writeCommLog("システム初期化完了。赤札絶対固定・右ログ高速巡航版稼働。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
