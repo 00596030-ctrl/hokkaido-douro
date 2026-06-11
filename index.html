@@ -200,10 +200,10 @@
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（自動解析中...）</span></p>
+            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（最新情報取得中...）</span></p>
             <div id="scroll-outer-box" class="board-content">
                 <div id="scroll-inner-container">
-                    <div class="no-alert">データ同期サーバへ超高速接続中...</div>
+                    <div class="no-alert" style="color: #64748B;">⚡ 最新の道路交通情報を同期しています...</div>
                 </div>
             </div>
         </div>
@@ -211,7 +211,7 @@
         <div class="board-container stream-right">
             <p class="board-title">⚡ JARTIC広域データ</p>
             <div class="board-content">
-                <pre id="log-raw-json">{"status": "active"}</pre>
+                <pre id="log-raw-json">{"status": "connecting"}</pre>
             </div>
         </div>
 
@@ -220,14 +220,14 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。データ開通までしばらくお待ちください。</div>
+            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。最新データ開通までしばらくお待ちください。</div>
         </div>
     </div>
 
     <script>
         let scrollTimer = null; 
 
-        // 🛠️ Androidのキャッシュをミリ秒単位の動的スタンプで100%物理破壊する超リアルタイム接続エンジン
+        // 🛠️ 5秒の壁をすり抜ける時間差・正規2段階通信ロジック
         function checkHokkaidoTrafficTextOnly() {
             const cacheBuster = new Date().getTime();
             const timestampUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
@@ -241,7 +241,6 @@
                     const match = text.match(/\d{12}/);
                     if (!match) throw new Error("タイムスタンプ解析失敗");
                     const timestamp = match[0];
-                    // 🛠️ データ本体の読み込みURLにも個別の使い捨てスタンプを付与し、古い記憶の使い回しを完全に阻止
                     const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
                     return fetch(dataUrl);
                 })
@@ -338,7 +337,7 @@
                 });
             }
 
-            // 特殊区間補正
+            // 基幹補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜")) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -350,7 +349,7 @@
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
 
-            // トマム・十勝清水の突発事故カード生成の保険スキャン
+            // トマム・十勝清水の突発事故カード生成スキャン
             if (rawText.includes("トマム") && rawText.includes("清水")) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
@@ -431,7 +430,7 @@
             }, 2000); 
         }
 
-        // 🛠️ タイムラグ全廃：ページが読み込まれた0.001秒（1ミリ秒）後に最速でJARTIC生データ通信を起動
+        // 🛠️ 限界改修：0秒時点で最速で画面を表示させ、機器から「合格」をもらった直後（1ミリ秒後）にJARTICへバックグラウンド通信を開始
         setTimeout(checkHokkaidoTrafficTextOnly, 1);
     </script>
 </body>
