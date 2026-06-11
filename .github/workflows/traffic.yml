@@ -2,8 +2,8 @@ name: JARTICリアルタイム自動同期システム
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
-  workflow_dispatch:
+    - cron: '*/1 * * * *' # 1分ごとに24時間自動実行
+  workflow_dispatch: # 手動起動ボタン
 
 jobs:
   build:
@@ -12,22 +12,15 @@ jobs:
     - name: コードをチェックアウト
       uses: actions/checkout@v4
 
-    - name: 3つの最新データを同時に一括回収
+    - name: JARTICの交通規制データをクリーンに回収
       run: |
-        # 1. JARTICの交通規制データを回収
         curl -s "https://www.jartic.or.jp/geo/v1/hokkaido/freeway/features.json" > data.json
-        
-        # 2. Yahoo!天気・災害（本物の気象・災害RSSチャンネル）へ修正！
-        curl -s "https://news.yahoo.co.jp/rss/topics/bousai.xml" > yahoo_weather.xml
-        
-        # 3. Yahoo!ニュース（社会・事件事故専用チャンネル）を回収
-        curl -s "https://news.yahoo.co.jp/rss/topics/shakai.xml" > yahoo_news.xml
 
     - name: 最新データをGitHubリポジトリへ自動書き込み
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git status
-        git add data.json yahoo_weather.xml yahoo_news.xml
-        git commit -m "【自動管制】気象仕入れルートのバグを完全修正" || exit 0
+        git add data.json
+        git commit -m "【自動管制】JARTIC単独・鉄壁のリアルタイム同期完了" || exit 0
         git push
