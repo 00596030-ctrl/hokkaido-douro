@@ -84,7 +84,6 @@
             flex-shrink: 0;
         }
 
-        /* 🛠️ 左メイン掲示板：内部を縦並びの2室構造に大改造 */
         .board-content-wrapper {
             flex: 1;
             display: flex;
@@ -95,7 +94,6 @@
             box-sizing: border-box;
         }
 
-        /* 🛠️ 1階：【通行止め絶対固定エリア】（最上部） */
         #fixed-danger-zone {
             flex-shrink: 0;
             background-color: #000000;
@@ -103,7 +101,6 @@
             box-sizing: border-box;
         }
 
-        /* 🛠️ 2階：【黄色い規制専用・スクロールエリア】（下部を一杯に使う） */
         #scroll-outer-box {
             flex: 1;
             background-color: #000000;
@@ -132,7 +129,6 @@
             position: relative;
         }
 
-        /* 🛠️ 黄色カードコンテナ（この中身だけが動く） */
         #scroll-inner-container {
             position: absolute;
             width: calc(100% - 30px);
@@ -144,7 +140,7 @@
             position: absolute;
             width: calc(100% - 24px);
             top: 12px;
-            transition: top 0.4s ease-out;
+            transition: top 0.2s ease-out; /* 🛠️ スピードアップに伴い追従をなめらかに */
         }
 
         .alert-item {
@@ -338,8 +334,8 @@
             
             document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期完了）`;
 
-            let redAlerts = [];   // 🛠️ 赤札専用の格納庫
-            let yellowAlerts = [];// 🛠️ 黄札専用の格納庫
+            let redAlerts = [];   
+            let yellowAlerts = [];
             let closedCount = 0; 
             let constCount = 0;  
 
@@ -392,178 +388,4 @@
                     if (isHit) {
                         let routeName = "管轄専用道";
                         
-                        if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜") || iText.includes("留萌") || iText.includes("幌糠")) routeName = "深川留萌自動車道";
-                        else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹") || iText.includes("幸福") || iText.includes("更別")) routeName = "帯広広尾自動車道";
-                        else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽") || iText.includes("上川") || iText.includes("愛別")) routeName = "旭川紋別自動車道";
-                        else if (iText.includes("日高") || iText.includes("沼ノ端") || iText.includes("厚真") || iText.includes("鵡川") || iText.includes("門別")) routeName = "日高自動車道";
-                        else if (iText.includes("名寄美深") || iText.includes("美深") || iText.includes("音威子府") || iText.includes("豊富")) routeName = "名寄美深道路";
-                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分") || iText.includes("長流枝") || iText.includes("音更") || iText.includes("池田") || iText.includes("本別") || iText.includes("足寄") || iText.includes("浦幌") || iText.includes("白糠") || iText.includes("阿寒") || iText.includes("釧路西") || iText.includes("大楽毛") || iText.includes("由仁")) routeName = "道東自動車道";
-                        else if (iText.includes("釧路") || iText.includes("別保") || iText.includes("尾幌") || iText.includes("厚岸") || iText.includes("根室")) routeName = "釧路・根室専用道";
-                        else if (iText.includes("オホーツク") || iText.includes("訓子府") || iText.includes("置戸") || iText.includes("陸別") || iText.includes("北見")) routeName = "十勝オホーツク自動車道";
-                        else if (iText.includes("札樽") || iText.includes("小樽") || iText.includes("手稲") || iText.includes("新川") || iText.includes("札幌北") || iText.includes("張跨") || iText.includes("銭函") || iText.includes("金山")) routeName = "札樽自動車道";
-                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼") || iText.includes("北広島") || iText.includes("大谷地") || iText.includes("輪厚") || iText.includes("旭川") || iText.includes("士別") || iText.includes("室蘭") || iText.includes("苫小牧") || iText.includes("樽前") || iText.includes("有珠山") || iText.includes("茶志内") || iText.includes("砂川")) routeName = "道央自動車道";
-                        
-                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
-                            routeName = rdText;
-                        }
-
-                        let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制情報"}が検出されています。`;
-
-                        // 🛠️ 色に応じた部屋分けの実施
-                        if (rdText.includes("通行止")) {
-                            redAlerts.push({ text: detailText });
-                        } else {
-                            yellowAlerts.push({ text: detailText });
-                        }
-                    }
-                });
-            }
-
-            // 特殊区間補正（赤札用）
-            const rawText = JSON.stringify(jsonData);
-            if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
-                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
-            }
-            if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
-                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
-            }
-            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
-                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
-            }
-
-            // 🛠️ 重複除去システム（赤・黄それぞれ独立して実施）
-            let finalRedHTMLs = [];
-            let finalYellowHTMLs = [];
-            let seenTexts = new Set();
-            let seenRouteGeoKeys = new Set();
-
-            // 1. 赤の処理（完全固定）
-            redAlerts.forEach(item => {
-                if (seenTexts.has(item.text)) return;
-                let geoTokens = [];
-                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) {
-                    geoTokens.sort();
-                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red";
-                    if (seenRouteGeoKeys.has(geoKey)) return;
-                    seenRouteGeoKeys.add(geoKey);
-                }
-                seenTexts.add(item.text);
-                closedCount++;
-                finalRedHTMLs.push(`<div class="alert-item"><span class="alert-closed">【🚨 通行止め】</span> ${item.text}</div>`);
-            });
-
-            // 2. 黄の処理（スクロール）
-            yellowAlerts.forEach(item => {
-                if (seenTexts.has(item.text)) return;
-                let geoTokens = [];
-                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) {
-                    geoTokens.sort();
-                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-yellow";
-                    if (seenRouteGeoKeys.has(geoKey)) return;
-                    seenRouteGeoKeys.add(geoKey);
-                }
-                seenTexts.add(item.text);
-                constCount++;
-                finalYellowHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【⚠️ 規制・障害情報】</span> ${item.text}</div>`);
-            });
-
-            // 🛠️ 画面への流し込み（2つの部屋にそれぞれ配置）
-            document.getElementById("fixed-danger-zone").innerHTML = finalRedHTMLs.join("");
-            
-            const innerContainer = document.getElementById("scroll-inner-container");
-            
-            if (finalRedHTMLs.length === 0 && finalYellowHTMLs.length === 0) {
-                // 何もないとき
-                innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域 of 指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
-                innerContainer.style.top = "5px";
-                if (scrollTimer) clearInterval(scrollTimer);
-            } else {
-                if (finalYellowHTMLs.length > 0) {
-                    innerContainer.innerHTML = finalYellowHTMLs.join("");
-                    // 黄色カードがあるならスクロール開始
-                    startAutoScrollEngine();
-                } else {
-                    // 通行止めはあるが、黄色規制がゼロのとき
-                    innerContainer.innerHTML = "";
-                    if (scrollTimer) clearInterval(scrollTimer);
-                }
-            }
-
-            // 下部ニュース速報テロップの更新
-            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) {
-                tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
-            } else {
-                tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`);
-            }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
-            document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
-        }
-
-        // 左側：黄色カード専用の縦スクロール
-        function startAutoScrollEngine() {
-            if (scrollTimer) clearInterval(scrollTimer);
-            const outerBox = document.getElementById("scroll-outer-box");
-            const innerBox = document.getElementById("scroll-inner-container");
-            innerBox.style.top = "5px"; 
-            
-            setTimeout(() => {
-                const outerHeight = outerBox.clientHeight;
-                const innerHeight = innerBox.clientHeight;
-                if (innerHeight > outerHeight - 20) {
-                    let currentTop = 5;
-                    const maxScroll = -(innerHeight - outerHeight + 25);
-                    scrollTimer = setInterval(() => {
-                        currentTop -= 1; 
-                        innerBox.style.top = currentTop + "px";
-                        if (currentTop <= maxScroll) {
-                            clearInterval(scrollTimer);
-                            setTimeout(() => {
-                                innerBox.style.top = "5px";
-                                setTimeout(startAutoScrollEngine, 1000); 
-                            }, 2000);
-                        }
-                    }, 40); 
-                }
-            }, 2000); 
-        }
-
-        // 右側：縦スクロールスピード「2倍速」
-        function startRightLogJsonScroll() {
-            if (jsonScrollTimer) clearInterval(jsonScrollTimer);
-            
-            const outerBox = document.getElementById("log-json-outer-box");
-            const innerBox = document.getElementById("log-raw-json-container");
-            innerBox.style.top = "12px"; 
-            
-            setTimeout(() => {
-                const outerHeight = outerBox.clientHeight;
-                const innerHeight = innerBox.clientHeight;
-                
-                if (innerHeight > outerHeight - 24) {
-                    let currentTop = 12;
-                    const maxScroll = -(innerHeight - outerHeight + 30);
-                    
-                    jsonScrollTimer = setInterval(() => {
-                        currentTop -= 1.0; 
-                        innerBox.style.top = currentTop + "px";
-                        
-                        if (currentTop <= maxScroll) {
-                            clearInterval(jsonScrollTimer);
-                            setTimeout(() => {
-                                innerBox.style.top = "12px"; 
-                                setTimeout(startRightLogJsonScroll, 1000); 
-                            }, 3000); 
-                        }
-                    }, 35); 
-                }
-            }, 2000); 
-        }
-
-        writeCommLog("システム初期化完了。赤札絶対固定・2層管制レイアウト稼働。");
-        setTimeout(checkHokkaidoTrafficTextOnly, 100);
-    </script>
-</body>
-</html>
+                        if (iText.includes("深川留萌") || iText.includes("深
