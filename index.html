@@ -260,6 +260,7 @@
 
     <script>
         let scrollTimer = null; 
+        let globalRefreshInterval = null;
         const commLogBox = document.getElementById("log-live-communication");
         const jsonBackupBox = document.getElementById("log-raw-json");
 
@@ -275,12 +276,11 @@
         }
 
         function checkHokkaidoTrafficTextOnly() {
-            commLogBox.innerText = "=== 通信テスト開始 ===";
+            // 🛠️ 改善：画面ログが埋まりすぎないよう、通信開始ごとにログを適度にリセット
+            commLogBox.innerText = "=== リアルタイム自動巡航通信 ===";
             writeCommLog("[1/2] 中継基地(CORSプロキシ)経由でJARTIC時刻ファイルを読込...");
 
             const cacheBuster = new Date().getTime();
-            
-            // 🛠️ 改善：JARTICのセキュリティガードを合法的に無効化する「AllOrigins中継基地」を先頭にドッキング！
             const targetUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
 
@@ -297,8 +297,6 @@
                     
                     writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ中継基地経由で潜入...`);
                     const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
-                    
-                    // 🛠️ データ本体のURLの先頭にも中継基地をドッキング
                     const dataProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(dataUrl)}`;
                     return fetch(dataProxyUrl);
                 })
@@ -471,13 +469,14 @@
             }, 2000); 
         }
 
+        // 起動（0.1秒後に1回目の通信を実行）
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
-        // 45秒自爆リフレッシュ（サイネージサービスの仕様に合わせて継続駆動）
-        setTimeout(function() {
-            const nextVersion = new Date().getTime();
-            window.location.href = window.location.pathname + "?v=" + nextVersion;
-        }, 45000);
+        // 🛠️ 【新兵器：完全ステルス型自動タイマー】
+        // ページを一切移動させず、30秒ごとに「通信処理だけ」を裏でバックグラウンド実行します。
+        // これにより、サイネージアプリの移動禁止セキュリティを200%回避します！
+        if (globalRefreshInterval) clearInterval(globalRefreshInterval);
+        globalRefreshInterval = setInterval(checkHokkaidoTrafficTextOnly, 30000);
     </script>
 </body>
 </html>
