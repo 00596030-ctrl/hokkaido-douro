@@ -261,6 +261,7 @@
     <script>
         let scrollTimer = null; 
         let globalRefreshInterval = null;
+        let communicationCount = 0; // 🛠️ 通信回数を数えるカウンター
         const commLogBox = document.getElementById("log-live-communication");
         const jsonBackupBox = document.getElementById("log-raw-json");
 
@@ -276,19 +277,38 @@
         }
 
         function checkHokkaidoTrafficTextOnly() {
-            // 🛠️ 改善：画面のガタつきを無くすため、過去ログの全消去(innerText=...)を完全に廃止。
-            // ログの底に静かに次の通信メッセージを追記していくだけにします（完全サイレント化）。
-            writeCommLog("=== 自動巡航通信スタート ===");
-            writeCommLog("[1/2] 中継基地経由でJARTIC時刻ファイルを読込...");
+            communicationCount++;
+            
+            // 🛠️ 奇数回目と偶数回目で、使う中継基地サーバーを自動で入れ替える分散システム
+            let proxyPrefix = "";
+            let useEngineName = "";
+            
+            if (communicationCount % 2 === 1) {
+                useEngineName = "中継基地α (AllOrigins)";
+                proxyPrefix = "https://api.allorigins.win/raw?url=";
+            } else {
+                useEngineName = "中継基地β (CorsProxyIO)";
+                proxyPrefix = "https://corsproxy.io/?";
+            }
+
+            writeCommLog(`=== 自動巡航通信 [${communicationCount}回目] ===`);
+            writeCommLog(`[1/2] ${useEngineName}経由でJARTIC時刻ファイルを読込...`);
 
             const cacheBuster = new Date().getTime();
             const targetUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+            
+            // 各エンジンのURL組み立てルールに合わせる
+            let proxyUrl = "";
+            if (communicationCount % 2 === 1) {
+                proxyUrl = proxyPrefix + encodeURIComponent(targetUrl);
+            } else {
+                proxyUrl = proxyPrefix + targetUrl;
+            }
 
             fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("中継基地が応答拒否、またはJARTICへ接続失敗");
-                    writeCommLog("➡ [1/2] 成功：ブロックを回避して時刻データを取得！");
+                    if (!response.ok) throw new Error(`${useEngineName}が応答拒否、または接続タイムアウト`);
+                    writeCommLog(`➡ [1/2] 成功：${useEngineName}で時刻を取得！`);
                     return response.text();
                 })
                 .then(text => {
@@ -296,9 +316,16 @@
                     if (!match) throw new Error("12桁のフォルダ名解析失敗");
                     const timestamp = match[0];
                     
-                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ潜入...`);
+                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ${useEngineName}で潜入...`);
                     const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
-                    const dataProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(dataUrl)}`;
+                    
+                    let dataProxyUrl = "";
+                    if (communicationCount % 2 === 1) {
+                        dataProxyUrl = proxyPrefix + encodeURIComponent(dataUrl);
+                    } else {
+                        dataProxyUrl = proxyPrefix + dataUrl;
+                    }
+                    
                     return fetch(dataProxyUrl);
                 })
                 .then(response => {
@@ -470,11 +497,9 @@
             }, 2000); 
         }
 
-        // 起動（初期化ログを1回だけ出して開始）
-        writeCommLog("システム初期化完了。巡航を開始します。");
+        writeCommLog("システム初期化完了。ダブルエンジン型巡航を開始します。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
-        // 30秒ごとにページを動かさず裏通信のみ実行（追記型ログによりガタつき皆無）
         if (globalRefreshInterval) clearInterval(globalRefreshInterval);
         globalRefreshInterval = setInterval(checkHokkaidoTrafficTextOnly, 30000);
     </script>
