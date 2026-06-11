@@ -1,1 +1,26 @@
+name: JARTICリアルタイム自動同期システム
 
+on:
+  schedule:
+    - cron: '*/1 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: コードをチェックアウト
+      uses: actions/checkout@v4
+
+    - name: JARTICの交通規制データをクリーンに回収
+      run: |
+        curl -s -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "https://www.jartic.or.jp/geo/v1/hokkaido/freeway/features.json" > data.json
+
+    - name: 最新データをGitHubリポジトリへ自動書き込み
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git status
+        git add data.json
+        git commit -m "【自動管制】本物の初期安定版ルートへ完全復旧" || exit 0
+        git push
