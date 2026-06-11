@@ -310,11 +310,18 @@
             writeCommLog("=== セキュア同期確認スタート ===");
             writeCommLog("[1/1] GitHubサーバー内の data.json の読み込みを開始...");
 
-            const timestamp = new Date().getTime();
-            const jsonUrl = `./data.json?cache=${timestamp}`;
+            // 🛠️ サーバーの遅延・タイムラグを強制破壊する超強力なミリ秒パラメーター
+            const timeStamp = new Date().getTime();
+            const jsonUrl = `./data.json?v=${timeStamp}&nocache=${Math.random()}`;
 
             fetch(jsonUrl)
                 .then(response => {
+                    // もしサーバーの遅延のせいで「中身がHTMLのゴミデータ」が返ってきたら、
+                    // エラーで画面を止めず、1秒後に自動で即座に再読込（リトライ）をかける鉄壁の安全ルート
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("text/html")) {
+                        throw new TypeError("サーバーがまだ遅延しています。自動リトライします...");
+                    }
                     if (!response.ok) throw new Error("data.jsonが見つかりません。");
                     return response.json();
                 })
@@ -326,7 +333,9 @@
                     startRightLogJsonScroll();
                 })
                 .catch(error => {
-                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
+                    writeCommLog(`⚠️ 同期待機中: ${error.message || error.toString()}`);
+                    // サーバーが遅れている間は、1.5秒おきに超高速で何度も自動リトライをかけ続けます！
+                    setTimeout(checkHokkaidoTrafficTextOnly, 1500);
                 });
         }
 
@@ -477,6 +486,7 @@
             }, 2000); 
         }
 
+        // 60秒おきに最新チェック（エラー時は1.5秒で自動リトライ）
         setInterval(checkHokkaidoTrafficTextOnly, 60000);
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
