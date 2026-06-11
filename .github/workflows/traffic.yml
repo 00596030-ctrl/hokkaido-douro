@@ -2,8 +2,8 @@ name: JARTICリアルタイム自動同期システム
 
 on:
   schedule:
-    - cron: '*/1 * * * *' # 1分ごとに24時間自動実行
-  workflow_dispatch: # 手動起動ボタン
+    - cron: '*/1 * * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +14,7 @@ jobs:
 
     - name: JARTICの交通規制データをクリーンに回収
       run: |
-        curl -s "https://www.jartic.or.jp/geo/v1/hokkaido/freeway/features.json" > data.json
+        curl -s -H "Accept: application/json" "https://www.jartic.or.jp/geo/v1/hokkaido/freeway/features.json" > data.json
 
     - name: 最新データをGitHubリポジトリへ自動書き込み
       run: |
@@ -22,5 +22,5 @@ jobs:
         git config --local user.name "GitHub Action"
         git status
         git add data.json
-        git commit -m "【自動管制】最初の安定版ルートへ完全復旧" || exit 0
+        git commit -m "【運行管制】本物の初期安定版仕入れルートへ完全復旧" || exit 0
         git push
