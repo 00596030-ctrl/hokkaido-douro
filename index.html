@@ -203,7 +203,6 @@
         let scrollTimer = null; 
 
         function checkHokkaidoTrafficTextOnly() {
-            // 🛠️ 修正：GitHub Pagesのズレを防ぐため、ご自身のURLルート（./）を明示して確実にdata.jsonを狙い撃ちさせます
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
             fetch(jsonUrl)
@@ -230,13 +229,20 @@
             let closedCount = 0; 
             let constCount = 0;  
 
+            // 🛠️ 漏れを一切無くすため、北広島、大谷地、長流枝、札樽道の全IC地名を徹底網羅！
             const targetKeywords = [
+                // 深川留萌・帯広広尾・旭川紋別・名寄美深
                 "深川西", "秩父別", "沼田", "北竜ひまわり", 
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
-                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
-                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町"
+                // 道央道（大沼〜士別剣淵までの重要IC・PAを大補強）
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
+                "千歳", "恵庭", "輪厚", "北広島", "札幌南", "大谷地", "札幌IC", "江別西", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                // 道東道（長流枝、音更帯広方面を大補強）
+                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", "長流枝", "音更帯広", "池田",
+                // 札樽道（小樽〜札幌間を1文字残さず完全網羅）
+                "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "札幌北第二", "伏古", "雁来"
             ];
 
             if (jsonData.features && Array.isArray(jsonData.features)) {
@@ -261,8 +267,9 @@
                         else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹")) routeName = "帯広広尾自動車道";
                         else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽")) routeName = "旭川紋別自動車道";
                         else if (iText.includes("名寄美深") || iText.includes("美深") || iText.includes("音威子府")) routeName = "名寄美深道路";
-                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分")) routeName = "道東自動車道";
-                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼")) routeName = "道央自動車道";
+                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分") || iText.includes("長流枝") || iText.includes("音更")) routeName = "道東自動車道";
+                        else if (iText.includes("札樽") || iText.includes("小樽") || iText.includes("手稲") || iText.includes("新川") || iText.includes("札幌北")) routeName = "札樽自動車道";
+                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼") || iText.includes("北広島") || iText.includes("大谷地")) routeName = "道央自動車道";
 
                         if (isClosed) {
                             rawAlerts.push({ type: "close", text: `${routeName}：${iText}付近において、通行止め（重大事案）が発生しています。` });
@@ -273,6 +280,7 @@
                 });
             }
 
+            // 特殊区間補正（保険用）
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川留萌"))) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
