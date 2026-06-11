@@ -227,28 +227,40 @@
     <script>
         let scrollTimer = null; 
 
+        // 🛠️ 100%確実に通行止めをキャッチする「正規2段階認証ルート」へ完全復旧！
         function checkHokkaidoTrafficTextOnly() {
-            // 🛠️ 2段階通信を全廃。直接最新データ（A01.json）のみを狙い撃ちして通信時間を「半分」にし、Androidの5秒リミットを確実に突破
-            const dataUrl = "https://www.jartic.or.jp/d/traffic_info/r1/current/s/301/A01.json?t=" + new Date().getTime();
+            const timestampUrl = "https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=" + new Date().getTime();
 
-            fetch(dataUrl)
+            fetch(timestampUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error("ネットワーク応答異常");
+                    return response.text();
+                })
+                .then(text => {
+                    const match = text.match(/\d{12}/);
+                    if (!match) throw new Error("タイムスタンプ解析失敗");
+                    const timestamp = match[0];
+                    // 正規のリアルタイムフォルダを動的に指定
+                    const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=` + new Date().getTime();
+                    return fetch(dataUrl);
+                })
                 .then(response => {
                     if (!response.ok) throw new Error("データ受信失敗");
                     return response.json();
                 })
                 .then(jsonData => {
-                    updateControlBoard(jsonData, false);
+                    updateControlBoard(jsonData);
                 })
                 .catch(error => {
                     console.error("通信エラー:", error);
-                    // 通信が遮断されても、0秒時点で表示されている順調画面を維持してフリーズを防ぐ
+                    // 通信が失敗したときも画面がフリーズしないように時間を回す
                     const now = new Date();
                     const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
                     document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期中）`;
                 });
         }
 
-        function updateControlBoard(jsonData, isBackupMode) {
+        function updateControlBoard(jsonData) {
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
@@ -326,7 +338,7 @@
                 });
             }
 
-            // 固定補正
+            // 基幹ICの強制固定補正スキャン
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜")) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -338,7 +350,7 @@
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
 
-            // 重複排除フィルター
+            // 重複排除フィルター（地名ソート型）
             let finalHTMLs = [];
             let seenTexts = new Set(); 
             let seenRouteGeoKeys = new Set(); 
@@ -347,7 +359,7 @@
                 if (seenTexts.has(item.text)) return;
 
                 let geoTokens = [];
-                ["深川西", "秩父別", "沼田", "北竜ひまわり", "川西", "幸福", "中札内", "更別", "忠類", "大樹", "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "名寄", "智恵文", "美深", "音威子府", "大沼", "落部", "占冠", "占跨", "占観", "追分", "白老", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "野幌"].forEach(kw => {
+                ["深川西", "秩父別", "沼田", "北竜ひまわり", "川西", "幸福", "中札内", "更別", "忠類", "大樹", "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "名寄", "智恵文", "美深", "音威子府", "大沼", "落部", "占冠", "占跨", "占観", "トマム", "十勝清水", "追分", "白老", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "野幌"].forEach(kw => {
                     if (item.text.includes(kw)) geoTokens.push(kw);
                 });
 
@@ -368,7 +380,7 @@
                 }
             });
 
-            // テロップ生成
+            // 電光テロップテキスト生成
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
             if (closedCount > 0) {
                 tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
@@ -416,8 +428,9 @@
             }, 2000); 
         }
 
-        // 開いた0.01秒後に即通信。無駄を省いた超高速ロジック
-        setTimeout(checkHokkaidoTrafficTextOnly, 10);
+        // ページ読み込みから0.1秒後に最速で裏通信をキック
+        setTimeout(checkHokkaidoTrafficTextOnly, 100);
+        setInterval(checkHokkaidoTrafficTextOnly, 300000);
     </script>
 </body>
 </html>
