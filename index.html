@@ -305,18 +305,19 @@
         let cachedTickerYahooNews = []; 
 
         function checkHokkaidoTrafficTextOnly() {
-            // 最重要：JARTICのデータを最優先で叩き出す
+            // JARTIC交通情報を何が何でも最優先で実行
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
             fetch(jsonUrl)
                 .then(response => { if (!response.ok) throw new Error(); return response.json(); })
                 .then(jsonData => { updateControlBoard(jsonData); })
-                .catch(error => { console.log("Traffic data processing bypass."); });
+                .catch(error => { console.log("Traffic data check bypass."); });
 
-            // 天気と事故ニュースを時間差で完全自立ロード
-            setTimeout(loadLocalYahooWeather, 200);
-            setTimeout(loadLocalYahooNews, 400);
+            // 天気と事故ニュースを別室で安全ロード
+            setTimeout(loadLocalYahooWeather, 250);
+            setTimeout(loadLocalYahooNews, 500);
         }
 
+        // 🛠️ 天気情報の解析プログラムを完全修正（RSSの独自タグ構造に適合化）
         function loadLocalYahooWeather() {
             const xmlUrl = `./yahoo_weather.xml?t=${new Date().getTime()}`;
             fetch(xmlUrl)
@@ -324,21 +325,32 @@
                 .then(xmlText => {
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                    const items = xmlDoc.getElementsByTagName("item");
+                    
+                    // Yahoo防災RSS特有の「title」構造を確実に引っ掛ける安全策
+                    let items = xmlDoc.getElementsByTagName("item");
+                    if (items.length === 0) {
+                        items = xmlDoc.querySelectorAll("entry"); // 予備のフィード規格対策
+                    }
                     
                     let htmlParts = [];
                     for (let i = 0; i < items.length; i++) {
                         try {
-                            const title = items[i].getElementsByTagName("title")[0].textContent;
-                            htmlParts.push(`<div class="yahoo-text-item"><span class="weather-highlight">🌦️【防災・天気】</span>${title}</div>`);
+                            // 様々なRSS規格の文字化け・エラーを絶対回避する全方位タグ抽出
+                            let node = items[i].getElementsByTagName("title")[0] || items[i].querySelector("title");
+                            if (node && node.textContent) {
+                                htmlParts.push(`<div class="yahoo-text-item"><span class="weather-highlight">🌦️【防災・天気】</span>${node.textContent.trim()}</div>`);
+                            }
                         } catch(e){}
                     }
+                    
                     if(htmlParts.length > 0) {
                         document.getElementById("weather-inner-container").innerHTML = htmlParts.join("");
                         startDynamicYahooScroll("weather-outer-box", "weather-inner-container", "weather");
+                    } else {
+                        document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item">🟢 現在、北海道内に警報・重大な気象災害情報はありません。</div>`;
                     }
                 })
-                .catch(err => { console.log("Weather parse bypass."); });
+                .catch(err => { console.log("Weather critical safe bypass."); });
         }
 
         function loadLocalYahooNews() {
@@ -348,38 +360,40 @@
                 .then(xmlText => {
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                    const items = xmlDoc.getElementsByTagName("item");
+                    
+                    let items = xmlDoc.getElementsByTagName("item");
+                    if (items.length === 0) { items = xmlDoc.querySelectorAll("entry"); }
                     
                     let htmlParts = [];
                     let tickerTexts = [];
                     
-                    // 🛠️ 鉄壁の超厳選フィルター（これらが入っていない「政治」「芸能」は完全にシュレッダーにかけます）
-                    const targetTrafficWords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行止", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "トラック", "乗用車", "ひき逃げ", "追突", "横転"];
+                    // 運行・インフラ・交通に影響する広域キーワード（厳選・最適化）
+                    const targetTrafficWords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "トラック", "乗用車", "ひき逃げ", "追突", "横転", "列車", "乗客", "遅延", "逮捕", "容疑", "怪我", "けが", "搬送", "捜査", "消防", "警察", "立ち往生", "渋滞", "閉鎖", "危険"];
 
                     for (let i = 0; i < items.length; i++) {
                         try {
-                            const title = items[i].getElementsByTagName("title")[0].textContent;
-                            
-                            // 道路関係の言葉が含まれているか完全チェック
-                            let isRealTrafficNews = targetTrafficWords.some(key => title.includes(key));
-                            
-                            if (isRealTrafficNews) {
-                                htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚨【道路ニュース】</span>${title}</div>`);
-                                tickerTexts.push(`【Yahoo!ニュース】${title}`);
+                            let node = items[i].getElementsByTagName("title")[0] || items[i].querySelector("title");
+                            if (node && node.textContent) {
+                                const titleText = node.textContent.trim();
+                                let isRealTrafficNews = targetTrafficWords.some(key => titleText.includes(key));
+                                
+                                if (isRealTrafficNews) {
+                                    htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚨【道路ニュース】</span>${titleText}</div>`);
+                                    tickerTexts.push(`【Yahoo!ニュース】${titleText}`);
+                                }
                             }
                         } catch(e){}
                     }
                     
-                    // 🛠️ 万が一、事故ニュースが0件のクリーンな時間帯は、案内文を出してフリーズを防ぐ
                     if (htmlParts.length === 0) {
-                        htmlParts.push(`<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、Yahoo!ニュース上に広域運行に直結する重大な事故・災害速報はありません。</div>`);
+                        htmlParts.push(`<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、運行に影響する重大な事故・大雪災害の速報ニュースはありません。</div>`);
                     }
                     
                     document.getElementById("accident-inner-container").innerHTML = htmlParts.join("");
                     cachedTickerYahooNews = tickerTexts;
                     startDynamicYahooScroll("accident-outer-box", "accident-inner-container", "accident");
                 })
-                .catch(err => { console.log("News parse bypass."); });
+                .catch(err => { console.log("News critical safe bypass."); });
         }
 
         function updateControlBoard(jsonData) {
@@ -401,7 +415,7 @@
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "伏古", "雁来", "小樽IC", "小樽JCT", "張碓", "金山", "札幌西", "張碓PA", "金山PA",
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", 
                 "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "千歳恵庭JCT", "キウス", "由仁", "むかわ穂別", "十勝平原", "帯広JCT", "上浦幌", "釧路西", "大楽毛",
-                "任PA", "むかわ穂別PA", "占冠PA", "十勝平原SA", "長流枝PA",
+                "由仁PA", "むかわ穂別PA", "占冠PA", "十勝平原SA", "長流枝PA",
                 "深川西", "秩父別", "沼田", "北竜ひまわり", "留萌大和田", "留萌", "幌糠",
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "旭川紋別", "上川天幕", "上川層雲峡", "奥白滝",
                 "沼ノ端", "苫東中央", "厚真", "鵡川", "汐見", "富川", "日高富川", "門別", "日高門別",
