@@ -1,0 +1,32 @@
+name: JARTICリアルタイム自動同期システム
+
+on:
+  schedule:
+    # 1分ごとに裏で勝手にJARTICのデータを奪いに行く設定
+    - cron: '*/1 * * * *'
+  workflow_dispatch: # 手動で今すぐ実行するためのボタン
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+    - name: コードを引き出す
+      uses: actions/checkout@v4
+
+    - name: 最新のJARTIC生データを安全に奪取
+      run: |
+        TIMESTAMP=$(curl -s "https://www.jartic.or.jp/d/traffic_info/r1/target.json" | grep -oE '[0-3][0-9]{11}' | head -n 1)
+        if [ -z "$TIMESTAMP" ]; then
+          echo "タイムスタンプの取得に失敗しました。"
+          exit 1
+        fi
+        echo "最新フォルダ: $TIMESTAMP"
+        # 生データをJARTICから直接ダウンロードして、GitHub内に「data.json」として保存
+        curl -s "https://www.jartic.or.jp/d/traffic_info/r1/${TIMESTAMP}/s/301/A01.json" -o data.json
+
+    - name: 変更があったらGitHubの画面を自動で書き換えて保存
+      run: |
+        git config --global user.name "GitHub Actions Traffic Bot"
+        git config --global user.email "actions@github.com"
+        git add data.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "JARTIC最新交通情報自動同期" && git push)
