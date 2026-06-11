@@ -48,7 +48,7 @@
             display: flex;
             gap: 15px;
             width: 100%;
-            height: calc(100vh - 65px); /* 右側のログ枠を全廃したので画面を広々使う */
+            height: calc(100vh - 65px); 
             box-sizing: border-box;
         }
 
@@ -60,7 +60,7 @@
             border-radius: 16px;
             padding: 18px;
             box-sizing: border-box;
-            width: 100%; /* 全画面に拡大 */
+            width: 100%; 
         }
 
         .board-title {
@@ -92,7 +92,7 @@
         }
 
         .alert-item {
-            font-size: 20px; /* サイネージ専用に見やすく文字を拡大 */
+            font-size: 20px; 
             line-height: 1.7;
             margin-bottom: 15px;
             padding: 15px 20px;
@@ -203,9 +203,10 @@
         let scrollTimer = null; 
 
         function checkHokkaidoTrafficTextOnly() {
-            // 🛠️ 外部へのFetchを完全廃止！同じフォルダ内の「data.json」を読みに行くだけ（100%ブロックされない）
-            // アプリのリロード対策としてキャッシュスタンプだけ付与
-            fetch(`data.json?t=${new Date().getTime()}`)
+            // 🛠️ 修正：GitHub Pagesのズレを防ぐため、ご自身のURLルート（./）を明示して確実にdata.jsonを狙い撃ちさせます
+            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
+
+            fetch(jsonUrl)
                 .then(response => {
                     if (!response.ok) throw new Error("データ未生成");
                     return response.json();
@@ -359,10 +360,7 @@
             }, 2000); 
         }
 
-        // 起動（右側のデバッグ枠は全廃し、サイレントで自分自身のファイルを読み込みます）
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
-
-        // サイネージアプリ側の1分リロード機能と共存するため、内側タイマーはオフにします
     </script>
 </body>
 </html>
