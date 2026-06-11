@@ -39,7 +39,7 @@
 
         #status-text {
             font-size: 13px;
-            color: #22C55E;
+            color: #E2E8F0;
             margin: 2px 0 0 0;
             font-weight: bold;
         }
@@ -64,11 +64,12 @@
         }
 
         .info-left {
-            width: 80%;
+            width: 70%;
         }
 
         .stream-right {
-            width: 20%;
+            width: 30%;
+            gap: 10px; 
         }
 
         .board-title {
@@ -80,6 +81,7 @@
             padding-bottom: 6px;
             display: flex;
             justify-content: space-between;
+            flex-shrink: 0;
         }
 
         .board-content {
@@ -90,6 +92,24 @@
             overflow: hidden; 
             box-sizing: border-box;
             position: relative;
+        }
+
+        .log-half-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .log-scroll-area {
+            flex: 1;
+            background-color: #000000;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #1E293B;
+            overflow-y: auto;
+            margin: 0;
+            box-sizing: border-box;
         }
 
         #scroll-inner-container {
@@ -130,12 +150,22 @@
             line-height: 1.8;
         }
 
+        #log-live-communication {
+            color: #38BDF8;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
         #log-raw-json {
             color: #4ADE80;
             font-family: monospace;
             font-size: 11px;
             line-height: 1.3;
             margin: 0;
+            white-space: pre;
         }
 
         .ticker-container {
@@ -194,13 +224,13 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24Hリアルタイム広域同期管制中</p>
+        <p id="status-text">● 通信シグナル監視システム起動中</p>
     </div>
 
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（最新情報取得中...）</span></p>
+            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（同期中）</span></p>
             <div id="scroll-outer-box" class="board-content">
                 <div id="scroll-inner-container">
                     <div class="no-alert" style="color: #64748B;">⚡ 最新の道路交通情報を同期しています...</div>
@@ -209,9 +239,13 @@
         </div>
 
         <div class="board-container stream-right">
-            <p class="board-title">⚡ JARTIC広域データ</p>
-            <div class="board-content">
-                <pre id="log-raw-json">{"status": "connecting"}</pre>
+            <div class="log-half-box">
+                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">📡 ① 今現在の通信チェックログ</p>
+                <pre id="log-live-communication" class="log-scroll-area">システム初期化中...</pre>
+            </div>
+            <div class="log-half-box">
+                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 直前に取得成功しているデータ（保持）</p>
+                <pre id="log-raw-json" class="log-scroll-area">（データ待機中...）</pre>
             </div>
         </div>
 
@@ -220,41 +254,72 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。最新データ開通までしばらくお待ちください。</div>
+            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。データ開通までしばらくお待ちください。</div>
         </div>
     </div>
 
     <script>
         let scrollTimer = null; 
+        const commLogBox = document.getElementById("log-live-communication");
+        const jsonBackupBox = document.getElementById("log-raw-json");
+
+        if (localStorage.getItem("jartic_backup_cache")) {
+            jsonBackupBox.innerText = localStorage.getItem("jartic_backup_cache");
+        }
+
+        function writeCommLog(message) {
+            const now = new Date();
+            const timestamp = `[${now.toLocaleTimeString()}] `;
+            commLogBox.innerText += "\n" + timestamp + message;
+            commLogBox.scrollTop = commLogBox.scrollHeight;
+        }
 
         function checkHokkaidoTrafficTextOnly() {
+            commLogBox.innerText = "=== 通信テスト開始 ===";
+            writeCommLog("[1/2] JARTIC時刻ファイルの読込を開始...");
+
             const cacheBuster = new Date().getTime();
             const timestampUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
 
             fetch(timestampUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error("ネットワーク応答異常");
+                    if (!response.ok) throw new Error("時刻ファイルの応答拒否");
+                    writeCommLog("➡ [1/2] 成功：時刻データをキャッチしました");
                     return response.text();
                 })
                 .then(text => {
                     const match = text.match(/\d{12}/);
-                    if (!match) throw new Error("タイムスタンプ解析失敗");
+                    if (!match) throw new Error("12桁のフォルダ名解析失敗");
                     const timestamp = match[0];
+                    
+                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ突入します...`);
                     const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
                     return fetch(dataUrl);
                 })
                 .then(response => {
-                    if (!response.ok) throw new Error("データ受信失敗");
+                    if (!response.ok) throw new Error("交通情報本体ファイルの応答拒否");
+                    writeCommLog("➡ [2/2] 成功：生データのダウンロード完了");
                     return response.json();
                 })
                 .then(jsonData => {
+                    writeCommLog("🟢 解析完了！表示を上書きします。");
+                    const formattedJSON = JSON.stringify(jsonData, null, 2);
+                    jsonBackupBox.innerText = formattedJSON;
+                    localStorage.setItem("jartic_backup_cache", formattedJSON);
+
                     updateControlBoard(jsonData);
                 })
                 .catch(error => {
-                    console.error("通信エラー:", error);
+                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
                     const now = new Date();
                     const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
-                    document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期中）`;
+                    document.getElementById("live-clock-tag").innerText = `（${timeStr} 通信待機中）`;
+                    
+                    if (localStorage.getItem("jartic_backup_cache")) {
+                        writeCommLog("⚠️ 過去のバックアップデータを画面に臨時適用します。");
+                        const backupData = JSON.parse(localStorage.getItem("jartic_backup_cache"));
+                        updateControlBoard(backupData);
+                    }
                 });
         }
 
@@ -265,11 +330,20 @@
             document.getElementById("live-clock-tag").innerText = `（${timeStr} リアルタイム自動解析）`;
             document.getElementById("status-text").innerText = "● 24Hリアルタイム広域同期管制中（最終同期: " + now.toLocaleTimeString() + "）";
             document.getElementById("status-text").style.color = "#22C55E";
-            document.getElementById("log-raw-json").innerText = JSON.stringify(jsonData, null, 2);
 
             let rawAlerts = [];
             let closedCount = 0; 
             let constCount = 0;  
+
+            // 🛠️ 指定路線のすべての地名を配列化
+            const targetKeywords = [
+                "深川西", "秩父別", "沼田", "北竜ひまわり", 
+                "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
+                "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", 
+                "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町"
+            ];
 
             if (jsonData.features && Array.isArray(jsonData.features)) {
                 jsonData.features.forEach(feature => {
@@ -285,69 +359,36 @@
 
                     if (!isClosed && !isConst) return;
 
-                    // 1. 深川留萌自動車道
-                    if (iText.includes("深川西") || iText.includes("秩父別") || iText.includes("沼田") || iText.includes("北竜ひまわり")) {
+                    // 🛠️ 革命的改修：JARTICの文字の並びに依存せず、指定キーワードが1つでもヒットしたら即座にカード化
+                    let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword));
+
+                    if (isHit) {
+                        let routeName = "管轄高速・専用道";
+                        if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜")) routeName = "深川留萌自動車道";
+                        else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹")) routeName = "帯広広尾自動車道";
+                        else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽")) routeName = "旭川紋別自動車道";
+                        else if (iText.includes("名寄美深") || iText.includes("美深") || iText.includes("音威子府")) routeName = "名寄美深道路";
+                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分")) routeName = "道東自動車道";
+                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼")) routeName = "道央自動車道";
+
                         if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `深川留萌自動車道：${iText}間が、事故または災害のため通行止めとなっています。` });
+                            rawAlerts.push({ type: "close", text: `${routeName}：${iText}付近において、通行止め（重大事案）が発生しています。` });
                         } else {
-                            rawAlerts.push({ type: "const", text: `深川留萌自動車道：${iText}において、道路補修工事に伴う車線規制が実施されています。` });
-                        }
-                    }
-                    // 2. 帯広広尾自動車道
-                    else if (iText.includes("川西") || iText.includes("幸福") || iText.includes("中札内") || iText.includes("更別") || iText.includes("忠類") || iText.includes("大樹")) {
-                        if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `帯広広尾自動車道：${iText}間が、通行止めとなっています。` });
-                        } else {
-                            rawAlerts.push({ type: "const", text: `帯広広尾自動車道：${iText}付近において、維持作業のため車線規制が実施されています。` });
-                        }
-                    }
-                    // 3. 旭川紋別自動車道
-                    else if (iText.includes("愛別") || iText.includes("層雲峡") || iText.includes("浮島") || iText.includes("白滝") || iText.includes("丸瀬布") || iText.includes("遠軽")) {
-                        if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `旭川紋別自動車道：${iText}間が、災害または気象規制のため通行止めとなっています。` });
-                        } else {
-                            rawAlerts.push({ type: "const", text: `旭川紋別自動車道：${iText}付近において、工事に伴う規制が実施されています。` });
-                        }
-                    }
-                    // 4. 名寄美深道路
-                    else if (iText.includes("名寄") || iText.includes("智恵文") || iText.includes("美深") || iText.includes("音威子府") || iText.includes("豊富") || iText.includes("幌延") || iText.includes("中川")) {
-                        if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `名寄美深道路：${iText}間が、現在通行止めとなっています。` });
-                        } else {
-                            rawAlerts.push({ type: "const", text: `名寄美深道路：${iText}付近において車線規制が実施されています。` });
-                        }
-                    }
-                    // 5. 道東自動車道
-                    else if (iText.includes("占跨") || iText.includes("占観") || iText.includes("占微") || iText.includes("占冠") || iText.includes("十勝清水") || iText.includes("トマム") || iText.includes("芽室") || iText.includes("夕張") || iText.includes("穂別") || iText.includes("追分")) {
-                        if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `道東自動車道：${iText}間が、現在通行止めとなっています。` });
-                        } else {
-                            rawAlerts.push({ type: "const", text: `道東自動車道：${iText}において、${cText}による車線規制が実施されています。` });
-                        }
-                    }
-                    // 6. 道央自動車道
-                    else if (iText.includes("大沼") || iText.includes("落部") || iText.includes("森") || iText.includes("八雲") || iText.includes("長万部") || iText.includes("豊浦") || iText.includes("虻田洞爺湖") || iText.includes("伊達") || iText.includes("室蘭") || iText.includes("登別") || iText.includes("白老") || iText.includes("苫小牧") || iText.includes("恵庭") || iText.includes("千歳") || iText.includes("江別東") || iText.includes("岩見沢") || iText.includes("三笠") || iText.includes("美唄") || iText.includes("砂川") || iText.includes("滝川") || iText.includes("野幌")) {
-                        if (isClosed) {
-                            rawAlerts.push({ type: "close", text: `道央自動車道：${iText}間が、現在通行止めとなっています。` });
-                        } else {
-                            rawAlerts.push({ type: "const", text: `道央自動車道：${iText}において、${cText}による車線規制が実施されています。` });
+                            rawAlerts.push({ type: "const", text: `${routeName}：${iText}付近において、${cText || "規制・補修作業"}が実施されています。` });
                         }
                     }
                 });
             }
 
-            // 🛠️ 改善：生データ側にすでに同じ地名ペアが存在する場合は、重複して一括作成させないガードロックを搭載
+            // 特殊区間補正（保険用）
             const rawText = JSON.stringify(jsonData);
-            if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川西") && a.text.includes("北竜"))) {
+            if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川留萌"))) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
             }
-            if ((rawText.includes("占冠") || rawText.includes("占跨") || rawText.includes("占観")) && (rawText.includes("追分")) && !rawAlerts.some(a => a.text.includes("占冠") && a.text.includes("追分"))) {
+            if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !rawAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
             }
-            if (rawText.includes("大沼") && rawText.includes("落部") && !rawAlerts.some(a => a.text.includes("大沼") && a.text.includes("落部"))) {
-                rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
-            }
-            if (rawText.includes("トマム") && rawText.includes("清水") && !rawAlerts.some(a => a.text.includes("トマム") && a.text.includes("清水"))) {
+            if (rawText.includes("トマム") && rawText.includes("清水") && !rawAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
 
@@ -359,8 +400,7 @@
                 if (seenTexts.has(item.text)) return;
 
                 let geoTokens = [];
-                // 🛠️ 修正：重複検知キーワードに「江別東」と「追分町」を確実に追加！これでダブりを完全に抹殺します。
-                ["深川西", "秩父別", "沼田", "北竜ひまわり", "川西", "幸福", "中札内", "更別", "忠類", "大樹", "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "名寄", "智恵文", "美深", "音威子府", "大沼", "落部", "占冠", "占跨", "占観", "トマム", "十勝清水", "追分", "追分町", "白老", "恵庭", "千歳", "江別東", "岩見沢", "三笠", "野幌"].forEach(kw => {
+                targetKeywords.forEach(kw => {
                     if (item.text.includes(kw)) geoTokens.push(kw);
                 });
 
@@ -430,10 +470,11 @@
 
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
+        // 自爆リフレッシュ
         setTimeout(function() {
             const nextVersion = new Date().getTime();
             window.location.href = window.location.pathname + "?v=" + nextVersion;
-        }, 45000);
+        }, 150000);
     </script>
 </body>
 </html>
