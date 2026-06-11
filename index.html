@@ -276,9 +276,10 @@
         }
 
         function checkHokkaidoTrafficTextOnly() {
-            // 🛠️ 改善：画面ログが埋まりすぎないよう、通信開始ごとにログを適度にリセット
-            commLogBox.innerText = "=== リアルタイム自動巡航通信 ===";
-            writeCommLog("[1/2] 中継基地(CORSプロキシ)経由でJARTIC時刻ファイルを読込...");
+            // 🛠️ 改善：画面のガタつきを無くすため、過去ログの全消去(innerText=...)を完全に廃止。
+            // ログの底に静かに次の通信メッセージを追記していくだけにします（完全サイレント化）。
+            writeCommLog("=== 自動巡航通信スタート ===");
+            writeCommLog("[1/2] 中継基地経由でJARTIC時刻ファイルを読込...");
 
             const cacheBuster = new Date().getTime();
             const targetUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
@@ -295,7 +296,7 @@
                     if (!match) throw new Error("12桁のフォルダ名解析失敗");
                     const timestamp = match[0];
                     
-                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ中継基地経由で潜入...`);
+                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ潜入...`);
                     const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
                     const dataProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(dataUrl)}`;
                     return fetch(dataProxyUrl);
@@ -469,12 +470,11 @@
             }, 2000); 
         }
 
-        // 起動（0.1秒後に1回目の通信を実行）
+        // 起動（初期化ログを1回だけ出して開始）
+        writeCommLog("システム初期化完了。巡航を開始します。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
-        // 🛠️ 【新兵器：完全ステルス型自動タイマー】
-        // ページを一切移動させず、30秒ごとに「通信処理だけ」を裏でバックグラウンド実行します。
-        // これにより、サイネージアプリの移動禁止セキュリティを200%回避します！
+        // 30秒ごとにページを動かさず裏通信のみ実行（追記型ログによりガタつき皆無）
         if (globalRefreshInterval) clearInterval(globalRefreshInterval);
         globalRefreshInterval = setInterval(checkHokkaidoTrafficTextOnly, 30000);
     </script>
