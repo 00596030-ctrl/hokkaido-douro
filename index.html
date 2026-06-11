@@ -39,7 +39,7 @@
 
         #status-text {
             font-size: 13px;
-            color: #E2E8F0;
+            color: #22C55E;
             margin: 2px 0 0 0;
             font-weight: bold;
         }
@@ -48,9 +48,8 @@
             display: flex;
             gap: 15px;
             width: 100%;
-            height: calc(100vh - 165px); 
+            height: calc(100vh - 65px); /* 右側のログ枠を全廃したので画面を広々使う */
             box-sizing: border-box;
-            flex-shrink: 0;
         }
 
         .board-container {
@@ -61,15 +60,7 @@
             border-radius: 16px;
             padding: 18px;
             box-sizing: border-box;
-        }
-
-        .info-left {
-            width: 70%;
-        }
-
-        .stream-right {
-            width: 30%;
-            gap: 10px; 
+            width: 100%; /* 全画面に拡大 */
         }
 
         .board-title {
@@ -81,7 +72,6 @@
             padding-bottom: 6px;
             display: flex;
             justify-content: space-between;
-            flex-shrink: 0;
         }
 
         .board-content {
@@ -94,24 +84,6 @@
             position: relative;
         }
 
-        .log-half-box {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .log-scroll-area {
-            flex: 1;
-            background-color: #000000;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #1E293B;
-            overflow-y: auto;
-            margin: 0;
-            box-sizing: border-box;
-        }
-
         #scroll-inner-container {
             position: absolute;
             width: calc(100% - 30px);
@@ -120,12 +92,12 @@
         }
 
         .alert-item {
-            font-size: 18px;
-            line-height: 1.6;
+            font-size: 20px; /* サイネージ専用に見やすく文字を拡大 */
+            line-height: 1.7;
             margin-bottom: 15px;
-            padding: 12px 18px;
+            padding: 15px 20px;
             border-radius: 8px;
-            border-left: 6px solid #EF4444;
+            border-left: 8px solid #EF4444;
             background-color: rgba(239, 68, 68, 0.1);
         }
         
@@ -143,29 +115,11 @@
 
         .no-alert {
             color: #22C55E;
-            font-size: 22px;
+            font-size: 26px;
             font-weight: bold;
             text-align: center;
             margin-top: 150px;
             line-height: 1.8;
-        }
-
-        #log-live-communication {
-            color: #38BDF8;
-            font-family: monospace;
-            font-size: 12px;
-            line-height: 1.4;
-            margin: 0;
-            white-space: pre-wrap;
-        }
-
-        #log-raw-json {
-            color: #4ADE80;
-            font-family: monospace;
-            font-size: 11px;
-            line-height: 1.3;
-            margin: 0;
-            white-space: pre;
         }
 
         .ticker-container {
@@ -224,134 +178,44 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 通信シグナル監視システム起動中</p>
+        <p id="status-text">● 24Hセキュア・ローカル配信管制中</p>
     </div>
 
     <div class="main-dashboard-layout">
-        
-        <div class="board-container info-left">
+        <div class="board-container">
             <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（同期中）</span></p>
             <div id="scroll-outer-box" class="board-content">
                 <div id="scroll-inner-container">
-                    <div class="no-alert" style="color: #64748B;">⚡ 最新の道路交通情報を同期しています...</div>
+                    <div class="no-alert" style="color: #64748B;">⚡ 道路交通情報を読み込んでいます...</div>
                 </div>
             </div>
         </div>
-
-        <div class="board-container stream-right">
-            <div class="log-half-box">
-                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">📡 ① 今現在の通信チェックログ</p>
-                <pre id="log-live-communication" class="log-scroll-area">システム初期化中...</pre>
-            </div>
-            <div class="log-half-box">
-                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 直前に取得成功しているデータ（保持）</p>
-                <pre id="log-raw-json" class="log-scroll-area">（データ待機中...）</pre>
-            </div>
-        </div>
-
     </div>
 
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。データ開通までしばらくお待ちください。</div>
+            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。</div>
         </div>
     </div>
 
     <script>
         let scrollTimer = null; 
-        let globalRefreshInterval = null;
-        let communicationCount = 0; // 🛠️ 通信回数を数えるカウンター
-        const commLogBox = document.getElementById("log-live-communication");
-        const jsonBackupBox = document.getElementById("log-raw-json");
-
-        if (localStorage.getItem("jartic_backup_cache")) {
-            jsonBackupBox.innerText = localStorage.getItem("jartic_backup_cache");
-        }
-
-        function writeCommLog(message) {
-            const now = new Date();
-            const timestamp = `[${now.toLocaleTimeString()}] `;
-            commLogBox.innerText += "\n" + timestamp + message;
-            commLogBox.scrollTop = commLogBox.scrollHeight;
-        }
 
         function checkHokkaidoTrafficTextOnly() {
-            communicationCount++;
-            
-            // 🛠️ 奇数回目と偶数回目で、使う中継基地サーバーを自動で入れ替える分散システム
-            let proxyPrefix = "";
-            let useEngineName = "";
-            
-            if (communicationCount % 2 === 1) {
-                useEngineName = "中継基地α (AllOrigins)";
-                proxyPrefix = "https://api.allorigins.win/raw?url=";
-            } else {
-                useEngineName = "中継基地β (CorsProxyIO)";
-                proxyPrefix = "https://corsproxy.io/?";
-            }
-
-            writeCommLog(`=== 自動巡航通信 [${communicationCount}回目] ===`);
-            writeCommLog(`[1/2] ${useEngineName}経由でJARTIC時刻ファイルを読込...`);
-
-            const cacheBuster = new Date().getTime();
-            const targetUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
-            
-            // 各エンジンのURL組み立てルールに合わせる
-            let proxyUrl = "";
-            if (communicationCount % 2 === 1) {
-                proxyUrl = proxyPrefix + encodeURIComponent(targetUrl);
-            } else {
-                proxyUrl = proxyPrefix + targetUrl;
-            }
-
-            fetch(proxyUrl)
+            // 🛠️ 外部へのFetchを完全廃止！同じフォルダ内の「data.json」を読みに行くだけ（100%ブロックされない）
+            // アプリのリロード対策としてキャッシュスタンプだけ付与
+            fetch(`data.json?t=${new Date().getTime()}`)
                 .then(response => {
-                    if (!response.ok) throw new Error(`${useEngineName}が応答拒否、または接続タイムアウト`);
-                    writeCommLog(`➡ [1/2] 成功：${useEngineName}で時刻を取得！`);
-                    return response.text();
-                })
-                .then(text => {
-                    const match = text.match(/\d{12}/);
-                    if (!match) throw new Error("12桁のフォルダ名解析失敗");
-                    const timestamp = match[0];
-                    
-                    writeCommLog(`[2/2] 最新フォルダ「${timestamp}」へ${useEngineName}で潜入...`);
-                    const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=${new Date().getTime()}`;
-                    
-                    let dataProxyUrl = "";
-                    if (communicationCount % 2 === 1) {
-                        dataProxyUrl = proxyPrefix + encodeURIComponent(dataUrl);
-                    } else {
-                        dataProxyUrl = proxyPrefix + dataUrl;
-                    }
-                    
-                    return fetch(dataProxyUrl);
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error("交通情報本体ファイルの応答拒否");
-                    writeCommLog("➡ [2/2] 成功：生の道路データのダウンロード完了！");
+                    if (!response.ok) throw new Error("データ未生成");
                     return response.json();
                 })
                 .then(jsonData => {
-                    writeCommLog("🟢 解析完了！表示を最新の交通情報に書き換えます。");
-                    const formattedJSON = JSON.stringify(jsonData, null, 2);
-                    jsonBackupBox.innerText = formattedJSON;
-                    localStorage.setItem("jartic_backup_cache", formattedJSON);
-
                     updateControlBoard(jsonData);
                 })
                 .catch(error => {
-                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
-                    const now = new Date();
-                    const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
-                    document.getElementById("live-clock-tag").innerText = `（${timeStr} 通信待機中）`;
-                    
-                    if (localStorage.getItem("jartic_backup_cache")) {
-                        writeCommLog("⚠️ バックアップから過去データを画面に臨時適用します。");
-                        const backupData = JSON.parse(localStorage.getItem("jartic_backup_cache"));
-                        updateControlBoard(backupData);
-                    }
+                    console.error(error);
+                    document.getElementById("live-clock-tag").innerText = "（データ配信待機中）";
                 });
         }
 
@@ -359,9 +223,7 @@
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
-            document.getElementById("live-clock-tag").innerText = `（${timeStr} リアルタイム自動解析）`;
-            document.getElementById("status-text").innerText = "● 24Hリアルタイム広域同期管制中（最終同期: " + now.toLocaleTimeString() + "）";
-            document.getElementById("status-text").style.color = "#22C55E";
+            document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期完了）`;
 
             let rawAlerts = [];
             let closedCount = 0; 
@@ -497,11 +359,10 @@
             }, 2000); 
         }
 
-        writeCommLog("システム初期化完了。ダブルエンジン型巡航を開始します。");
+        // 起動（右側のデバッグ枠は全廃し、サイレントで自分自身のファイルを読み込みます）
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
 
-        if (globalRefreshInterval) clearInterval(globalRefreshInterval);
-        globalRefreshInterval = setInterval(checkHokkaidoTrafficTextOnly, 30000);
+        // サイネージアプリ側の1分リロード機能と共存するため、内側タイマーはオフにします
     </script>
 </body>
 </html>
