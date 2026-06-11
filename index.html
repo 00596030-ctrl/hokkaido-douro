@@ -110,6 +110,7 @@
             overflow-y: auto;
             margin: 0;
             box-sizing: border-box;
+            position: relative; /* スクロール枠の基準化 */
         }
 
         #scroll-inner-container {
@@ -117,6 +118,14 @@
             width: calc(100% - 30px);
             top: 15px;
             transition: top 0.3s ease-out; 
+        }
+
+        /* 🛠️ 右下JSON用の絶対配置スクロールコンテナ */
+        #log-raw-json-container {
+            position: absolute;
+            width: calc(100% - 24px);
+            top: 12px;
+            transition: top 0.4s ease-out;
         }
 
         .alert-item {
@@ -245,7 +254,11 @@
             </div>
             <div class="log-half-box">
                 <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 読み込んだ生のJARTICデータ（JSON）</p>
-                <pre id="log-raw-json" class="log-scroll-area">（データ待機中...）</pre>
+                <div id="log-json-outer-box" class="log-scroll-area" style="overflow: hidden;">
+                    <div id="log-raw-json-container">
+                        <pre id="log-raw-json">（データ待機中...）</pre>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -260,6 +273,7 @@
 
     <script>
         let scrollTimer = null; 
+        let jsonScrollTimer = null; // 🛠️ 右下専用のタイマー枠を新設
         const commLogBox = document.getElementById("log-live-communication");
         const jsonBackupBox = document.getElementById("log-raw-json");
 
@@ -284,7 +298,11 @@
                 .then(jsonData => {
                     writeCommLog("=== 🟢 新しいジェイソンデータを解析します ===");
                     jsonBackupBox.innerText = JSON.stringify(jsonData, null, 2);
+                    
                     updateControlBoard(jsonData);
+                    
+                    // 🛠️ データの読み込み完了後、右下の自動スクロールを連動開始
+                    startRightLogJsonScroll();
                 })
                 .catch(error => {
                     writeCommLog(`❌ エラー発生: ${error.toString()}`);
@@ -301,19 +319,31 @@
             let closedCount = 0; 
             let constCount = 0;  
 
-            // 🛠️ 帯広〜釧路〜根室エリアの全IC・PAのキーワードを極限まで敷き詰めました！
             const targetKeywords = [
-                "深川西", "秩父別", "沼田", "北竜ひまわり", 
-                "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
-                "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", 
-                "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
-                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
+                // 道央自動車道
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爷湖", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌南", "大谷地", "札幌IC", "江別西", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
-                // 十勝・釧路・根室エリア（完全武装）
+                "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "虻田", "有珠山", "北吉原", "竹浦", "萩野", "錦岡", "苫小牧西", "苫小牧中央", "苫小牧東", 
+                "新千歳空港", "美沢", "祝梅", "茶志内", "奈井江砂川", "江部乙", "深川", "音江連山", "旭川鷹栖", "旭川北", "比布大雪", "比布JCT", "和寒", "士別剣淵", "砂川SA", "道央", "札幌JCT",
+                // 札樽自動車道
+                "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "伏古", "雁来", "小樽IC", "小樽JCT", "張碓", "金山", "札幌西",
+                // 道東自動車道
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", 
-                "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "釧路西",
+                "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "千歳恵庭JCT", "キウス", "由仁", "むかわ穂別", "十勝平原", "帯広JCT", "上浦幌", "釧路西", "大楽毛",
+                // 深川留萌自動車道
+                "深川西", "秩父別", "沼田", "北竜ひまわり", "留萌大和田", "留萌", "幌糠",
+                // 旭川紋別自動車道
+                "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "旭川紋別", "上川天幕", "上川層雲峡", "奥白滝",
+                // 日高自動車道
+                "沼ノ端", "苫東中央", "厚真", "鵡川", "汐見", "富川", "日高富川", "門別", "日高門別",
+                // 帯広広尾自動車道
+                "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
+                // 名寄美深道路
+                "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
+                // 釧路・根室専用道
                 "釧路中央", "釧路東", "別保", "尾幌", "糸魚沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "札幌北第二", "伏古", "雁来"
+                // 十勝オホーツク自動車道
+                "陸別", "置戸", "訓子府", "北見西", "北見北上", "北見中央", "北見川東", "北見東"
             ];
 
             if (jsonData.features && Array.isArray(jsonData.features)) {
@@ -325,35 +355,33 @@
                     let cText = props.c || "";   
                     let iText = props.i || "";   
 
-                    // 🛠️ 「事故」や「路肩規制」なども絶対に見逃さないよう判定条件を大幅緩和！
                     let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
                                   cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
-                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩");
+                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || rdText.includes("障害");
 
                     if (!isAlert) return;
 
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword));
 
                     if (isHit) {
-                        // 🛠️ 改善：判定ミスによる「画面から消滅するバグ」を防ぐため、初期値を「管轄道路」に固定
                         let routeName = "管轄専用道";
                         
-                        // 該当する路線名へきれいに分類
-                        if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜")) routeName = "深川留萌自動車道";
-                        else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹") || iText.includes("幸福")) routeName = "帯広広尾自動車道";
-                        else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽")) routeName = "旭川紋別自動車道";
-                        else if (iText.includes("名寄美深") || iText.includes("美深") || iText.includes("音威子府")) routeName = "名寄美深道路";
-                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分") || iText.includes("長流枝") || iText.includes("音更") || iText.includes("池田") || iText.includes("本別") || iText.includes("足寄") || iText.includes("浦幌") || iText.includes("白糠") || iText.includes("阿寒")) routeName = "道東自動車道";
+                        if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜") || iText.includes("留萌") || iText.includes("幌糠")) routeName = "深川留萌自動車道";
+                        else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹") || iText.includes("幸福") || iText.includes("更別")) routeName = "帯広広尾自動車道";
+                        else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽") || iText.includes("上川") || iText.includes("愛別")) routeName = "旭川紋別自動車道";
+                        else if (iText.includes("日高") || iText.includes("沼ノ端") || iText.includes("厚真") || iText.includes("鵡川") || iText.includes("門別")) routeName = "日高自動車道";
+                        else if (iText.includes("名寄美深") || iText.includes("美深") || iText.includes("音威子府") || iText.includes("豊富")) routeName = "名寄美深道路";
+                        else if (iText.includes("道東") || iText.includes("占冠") || iText.includes("トマム") || iText.includes("清水") || iText.includes("追分") || iText.includes("長流枝") || iText.includes("音更") || iText.includes("池田") || iText.includes("本別") || iText.includes("足寄") || iText.includes("浦幌") || iText.includes("白糠") || iText.includes("阿寒") || iText.includes("釧路西") || iText.includes("大楽毛")) routeName = "道東自動車道";
                         else if (iText.includes("釧路") || iText.includes("別保") || iText.includes("尾幌") || iText.includes("厚岸") || iText.includes("根室")) routeName = "釧路・根室専用道";
-                        else if (iText.includes("札樽") || iText.includes("小樽") || iText.includes("手稲") || iText.includes("新川") || iText.includes("札幌北")) routeName = "札樽自動車道";
-                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼") || iText.includes("北広島") || iText.includes("大谷地") || iText.includes("輪厚")) routeName = "道央自動車道";
+                        else if (iText.includes("オホーツク") || iText.includes("訓子府") || iText.includes("置戸") || iText.includes("陸別") || iText.includes("北見")) routeName = "十勝オホーツク自動車道";
+                        else if (iText.includes("札樽") || iText.includes("小樽") || iText.includes("手稲") || iText.includes("新川") || iText.includes("札幌北") || iText.includes("張碓") || iText.includes("銭函")) routeName = "札樽自動車道";
+                        else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼") || iText.includes("北広島") || iText.includes("大谷地") || iText.includes("輪厚") || iText.includes("旭川") || iText.includes("士別") || iText.includes("室蘭") || iText.includes("苫小牧")) routeName = "道央自動車道";
                         
-                        // もし上記に引っかからなくても、JARTIC側の元の道路名（rd）が書いてあればそれを採用
                         if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
                             routeName = rdText;
                         }
 
-                        let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制"}が検出されています。`;
+                        let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制情報"}が検出されています。`;
 
                         if (rdText.includes("通行止")) {
                             rawAlerts.push({ type: "close", text: detailText });
@@ -364,7 +392,7 @@
                 });
             }
 
-            // 特殊区間補正（変わらず維持）
+            // 特殊区間補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !rawAlerts.some(a => a.text.includes("深川留萌"))) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -401,7 +429,7 @@
                 if (item.type === "close") {
                     finalHTMLs.push(`<div class="alert-item"><span class="alert-closed">【通行止め】</span> ${item.text}</div>`);
                 } else {
-                    finalHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【規制・事故情報】</span> ${item.text}</div>`);
+                    finalHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【規制・障害情報】</span> ${item.text}</div>`);
                 }
             });
 
@@ -411,7 +439,7 @@
             } else {
                 tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`);
             }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線において事故・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
+            if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
 
             const innerContainer = document.getElementById("scroll-inner-container");
@@ -419,12 +447,13 @@
                 innerContainer.innerHTML = finalHTMLs.join("");
                 startAutoScrollEngine();
             } else {
-                innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域の指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
+                innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域 of 指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
                 innerContainer.style.top = "15px"; 
                 if (scrollTimer) clearInterval(scrollTimer);
             }
         }
 
+        // 🎬 左側：メイン掲示板スクロール
         function startAutoScrollEngine() {
             if (scrollTimer) clearInterval(scrollTimer);
             const outerBox = document.getElementById("scroll-outer-box");
@@ -452,7 +481,44 @@
             }, 2000); 
         }
 
-        writeCommLog("システム初期化完了。セキュアログ監視システムを起動しました。");
+        // 🎬 🛠️ 右側：ジェイソンデータ（JSON）専用の超滑らか自動縦スクロールエンジン
+        function startRightLogJsonScroll() {
+            if (jsonScrollTimer) clearInterval(jsonScrollTimer);
+            
+            const outerBox = document.getElementById("log-json-outer-box");
+            const innerBox = document.getElementById("log-raw-json-container");
+            innerBox.style.top = "12px"; // 初期位置リセット
+            
+            // データが書き換わって高さを認識するまで少し待つ
+            setTimeout(() => {
+                const outerHeight = outerBox.clientHeight;
+                const innerHeight = innerBox.clientHeight;
+                
+                // 生データの中身が枠より大きい場合のみスクロール開始
+                if (innerHeight > outerHeight - 24) {
+                    let currentTop = 12;
+                    // 一番下までスクロールしきる限界点を算出
+                    const maxScroll = -(innerHeight - outerHeight + 30);
+                    
+                    jsonScrollTimer = setInterval(() => {
+                        currentTop -= 0.5; // 0.5ピクセルずつ動かすことで、非常にゆったりとした読みやすい速度に調整
+                        innerBox.style.top = currentTop + "px";
+                        
+                        // 一番下まで到着したら
+                        if (currentTop <= maxScroll) {
+                            clearInterval(jsonScrollTimer);
+                            // 3秒間その場で余韻を持たせて停止
+                            setTimeout(() => {
+                                innerBox.style.top = "12px"; // パッと上に戻る
+                                setTimeout(startRightLogJsonScroll, 1000); // 1秒静止したあと再ループ
+                            }, 3000);
+                        }
+                    }, 35); // 更新間隔を短くしてカタカタ感を無くし、ヌルヌル動かします
+                }
+            }, 3000); // 起動時も3秒間トップで静止して読ませる
+        }
+
+        writeCommLog("システム初期化完了。152拠点マスター＆右ログ縦巡航エンジン稼働。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
