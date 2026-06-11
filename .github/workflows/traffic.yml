@@ -2,31 +2,32 @@ name: JARTICリアルタイム自動同期システム
 
 on:
   schedule:
-    # 1分ごとに裏で勝手にJARTICのデータを奪いに行く設定
-    - cron: '*/1 * * * *'
-  workflow_dispatch: # 手動で今すぐ実行するためのボタン
+    - cron: '*/1 * * * *' # 1分ごとに24時間自動実行
+  workflow_dispatch: # 手動起動ボタンも残す
 
 jobs:
-  update-data:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: コードを引き出す
+    - name: コードをチェックアウト
       uses: actions/checkout@v4
 
-    - name: 最新のJARTIC生データを安全に奪取
+    - name: 3つの最新データを同時に一括回収
       run: |
-        TIMESTAMP=$(curl -s "https://www.jartic.or.jp/d/traffic_info/r1/target.json" | grep -oE '[0-3][0-9]{11}' | head -n 1)
-        if [ -z "$TIMESTAMP" ]; then
-          echo "タイムスタンプの取得に失敗しました。"
-          exit 1
-        fi
-        echo "最新フォルダ: $TIMESTAMP"
-        # 生データをJARTICから直接ダウンロードして、GitHub内に「data.json」として保存
-        curl -s "https://www.jartic.or.jp/d/traffic_info/r1/${TIMESTAMP}/s/301/A01.json" -o data.json
+        # 1. JARTICの交通規制データを回収
+        curl -s "https://www.jartic.or.jp/geo/v1/hokkaido/freeway/features.json" > data.json
+        
+        # 2. Yahoo!天気・災害（北海道・防災）を安全にサーバー側で回収
+        curl -s "https://news.yahoo.co.jp/rss/topics/bousai.xml" > yahoo_weather.xml
+        
+        # 3. Yahoo!ニュース（国内・事故事件）を安全にサーバー側で回収
+        curl -s "https://news.yahoo.co.jp/rss/topics/domestic.xml" > yahoo_news.xml
 
-    - name: 変更があったらGitHubの画面を自動で書き換えて保存
+    - name: 最新データをGitHubリポジトリへ自動書き込み
       run: |
-        git config --global user.name "GitHub Actions Traffic Bot"
-        git config --global user.email "actions@github.com"
-        git add data.json
-        git diff --quiet && git diff --staged --quiet || (git commit -m "JARTIC最新交通情報自動同期" && git push)
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git status
+        git add data.json yahoo_weather.xml yahoo_news.xml
+        git commit -m "【自動管制】JARTIC・天気・事故ニュースの一括同期完了" || exit 0
+        git push
