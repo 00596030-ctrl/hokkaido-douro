@@ -227,7 +227,6 @@
     <script>
         let scrollTimer = null; 
 
-        // 🛠️ 5秒の壁をすり抜ける時間差・正規2段階通信ロジック
         function checkHokkaidoTrafficTextOnly() {
             const cacheBuster = new Date().getTime();
             const timestampUrl = `https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=${cacheBuster}`;
@@ -337,7 +336,7 @@
                 });
             }
 
-            // 基幹補正
+            // 固定補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜")) {
                 rawAlerts.push({ type: "close", text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -348,8 +347,6 @@
             if (rawText.includes("大沼") && rawText.includes("落部")) {
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
-
-            // トマム・十勝清水の突発事故カード生成スキャン
             if (rawText.includes("トマム") && rawText.includes("清水")) {
                 rawAlerts.push({ type: "close", text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
@@ -430,8 +427,15 @@
             }, 2000); 
         }
 
-        // 🛠️ 限界改修：0秒時点で最速で画面を表示させ、機器から「合格」をもらった直後（1ミリ秒後）にJARTICへバックグラウンド通信を開始
-        setTimeout(checkHokkaidoTrafficTextOnly, 1);
+        // 0.1秒後に最速でJARTICデータを初回読み込み
+        setTimeout(checkHokkaidoTrafficTextOnly, 100);
+
+        // 🛠️ 【新兵器】サイネージアプリのリロードを待たず、プログラム側で「45秒ごと」に画面ごと強制F5リフレッシュをかける！
+        // URLの末尾に「今この瞬間の時間」を自動合体させて、Androidの古い記憶（キャッシュ）を跡形もなく粉砕して完全な最新データに生まれ変わらせます。
+        setTimeout(function() {
+            const nextVersion = new Date().getTime();
+            window.location.href = window.location.pathname + "?v=" + nextVersion;
+        }, 45000); // アプリの1分リミットより少し手前の「45秒」で自爆更新させます
     </script>
 </body>
 </html>
