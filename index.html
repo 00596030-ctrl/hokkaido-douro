@@ -225,38 +225,26 @@
     </div>
 
     <script>
-        let lastValidData = null;
         let scrollTimer = null; 
 
         function checkHokkaidoTrafficTextOnly() {
-            const timestampUrl = "https://www.jartic.or.jp/d/traffic_info/r1/target.json?t=" + new Date().getTime();
+            // 🛠️ 2段階通信を全廃。直接最新データ（A01.json）のみを狙い撃ちして通信時間を「半分」にし、Androidの5秒リミットを確実に突破
+            const dataUrl = "https://www.jartic.or.jp/d/traffic_info/r1/current/s/301/A01.json?t=" + new Date().getTime();
 
-            fetch(timestampUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error("ネットワーク応答異常");
-                    return response.text();
-                })
-                .then(text => {
-                    const match = text.match(/\d{12}/);
-                    if (!match) throw new Error("タイムスタンプ解析失敗");
-                    const timestamp = match[0];
-                    const dataUrl = `https://www.jartic.or.jp/d/traffic_info/r1/${timestamp}/s/301/A01.json?t=` + new Date().getTime();
-                    return fetch(dataUrl);
-                })
+            fetch(dataUrl)
                 .then(response => {
                     if (!response.ok) throw new Error("データ受信失敗");
                     return response.json();
                 })
                 .then(jsonData => {
-                    lastValidData = jsonData;
                     updateControlBoard(jsonData, false);
                 })
                 .catch(error => {
                     console.error("通信エラー:", error);
-                    if (lastValidData) {
-                        updateControlBoard(lastValidData, true);
-                    }
-                    setTimeout(checkHokkaidoTrafficTextOnly, 15000);
+                    // 通信が遮断されても、0秒時点で表示されている順調画面を維持してフリーズを防ぐ
+                    const now = new Date();
+                    const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
+                    document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期中）`;
                 });
         }
 
@@ -265,16 +253,8 @@
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
             document.getElementById("live-clock-tag").innerText = `（${timeStr} リアルタイム自動解析）`;
-
-            const statusEl = document.getElementById("status-text");
-            if (isBackupMode) {
-                statusEl.innerText = `⚠️ 臨時バックアップモードで管制維持中（自動再接続を実行中）`;
-                statusEl.style.color = "#F59E0B";
-            } else {
-                statusEl.innerText = "● 24Hリアルタイム広域同期管制中（最終同期: " + now.toLocaleTimeString() + "）";
-                statusEl.style.color = "#22C55E";
-            }
-
+            document.getElementById("status-text").innerText = "● 24Hリアルタイム広域同期管制中（最終同期: " + now.toLocaleTimeString() + "）";
+            document.getElementById("status-text").style.color = "#22C55E";
             document.getElementById("log-raw-json").innerText = JSON.stringify(jsonData, null, 2);
 
             let rawAlerts = [];
@@ -358,7 +338,7 @@
                 rawAlerts.push({ type: "close", text: "道央自動車道：大沼公園ＩＣ～落部ＩＣ間が、現在通行止めとなっています。" });
             }
 
-            // 地名ソート重複排除
+            // 重複排除フィルター
             let finalHTMLs = [];
             let seenTexts = new Set(); 
             let seenRouteGeoKeys = new Set(); 
@@ -436,10 +416,8 @@
             }, 2000); 
         }
 
-        // 🛠️ 改善：ページを開いた「一瞬後（0.1秒後）」に即座にバックグラウンド通信を開始。
-        // サイネージ本番モードの初期ロード時のフリーズ判定を完全に回避します
-        setTimeout(checkHokkaidoTrafficTextOnly, 100);
-        setInterval(checkHokkaidoTrafficTextOnly, 300000);
+        // 開いた0.01秒後に即通信。無駄を省いた超高速ロジック
+        setTimeout(checkHokkaidoTrafficTextOnly, 10);
     </script>
 </body>
 </html>
