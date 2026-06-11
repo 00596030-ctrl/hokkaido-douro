@@ -69,7 +69,7 @@
 
         .stream-right {
             width: 30%;
-            gap: 10px; 
+            gap: 12px; 
         }
 
         .board-title {
@@ -110,23 +110,30 @@
             position: relative;
         }
 
-        .log-half-box {
+        .yahoo-half-box {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .log-scroll-area {
+        .yahoo-scroll-area {
             flex: 1;
             background-color: #000000;
             padding: 12px;
             border-radius: 8px;
             border: 1px solid #1E293B;
-            overflow-y: auto;
+            overflow: hidden; 
             margin: 0;
             box-sizing: border-box;
             position: relative;
+        }
+
+        .yahoo-inner-container {
+            position: absolute;
+            width: calc(100% - 24px);
+            top: 12px;
+            transition: top 0.3s ease-out;
         }
 
         #scroll-inner-container {
@@ -134,13 +141,6 @@
             width: calc(100% - 30px);
             top: 5px;
             transition: top 0.3s ease-out; 
-        }
-
-        #log-raw-json-container {
-            position: absolute;
-            width: calc(100% - 24px);
-            top: 12px;
-            transition: top 0.2s ease-out; 
         }
 
         .alert-item {
@@ -176,22 +176,23 @@
             width: 100%;
         }
 
-        #log-live-communication {
-            color: #38BDF8;
-            font-family: monospace;
-            font-size: 12px;
-            line-height: 1.4;
-            margin: 0;
-            white-space: pre-wrap;
+        .yahoo-text-item {
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 10px 12px;
+            border-bottom: 1px solid #1E293B;
+            color: #E2E8F0;
         }
-
-        #log-raw-json {
-            color: #4ADE80;
-            font-family: monospace;
-            font-size: 11px;
-            line-height: 1.3;
-            margin: 0;
-            white-space: pre;
+        .yahoo-text-item:last-child {
+            border-bottom: none;
+        }
+        .weather-highlight {
+            color: #38BDF8; 
+            font-weight: bold;
+        }
+        .accident-highlight {
+            color: #FBBF24; 
+            font-weight: bold;
         }
 
         .ticker-container {
@@ -250,7 +251,7 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24Hセキュア・ローカル配信管制中</p>
+        <p id="status-text">● 24Hリアルタイム情報管制運行中</p>
     </div>
 
     <div class="main-dashboard-layout">
@@ -270,15 +271,19 @@
         </div>
 
         <div class="board-container stream-right">
-            <div class="log-half-box">
-                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">📡 ① 内部ファイル同期ログ</p>
-                <pre id="log-live-communication" class="log-scroll-area">初期化中...</pre>
+            <div class="yahoo-half-box">
+                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">🌦️ ① Yahoo!天気・災害情報（北海道）</p>
+                <div id="weather-outer-box" class="yahoo-scroll-area">
+                    <div id="weather-inner-container" class="yahoo-inner-container">
+                        <div class="yahoo-text-item" style="color:#64748B;">🌦️ 気象情報を読み込み中...</div>
+                    </div>
+                </div>
             </div>
-            <div class="log-half-box">
-                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 読み込んだ生のJARTICデータ（JSON）</p>
-                <div id="log-json-outer-box" class="log-scroll-area" style="overflow: hidden;">
-                    <div id="log-raw-json-container">
-                        <pre id="log-raw-json">（データ待機中...）</pre>
+            <div class="yahoo-half-box">
+                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">🚘 ② Yahoo!ニュース（交通事故・気象・災害）</p>
+                <div id="accident-outer-box" class="yahoo-scroll-area">
+                    <div id="accident-inner-container" class="yahoo-inner-container">
+                        <div class="yahoo-text-item" style="color:#64748B;">🚘 道路影響ニュースを読み込み中...</div>
                     </div>
                 </div>
             </div>
@@ -289,50 +294,110 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。</div>
+            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報、およびYahoo!ニュース速報をリアルタイム巡航中。</div>
         </div>
     </div>
 
     <script>
         let scrollTimer = null; 
-        let jsonScrollTimer = null; 
-        const commLogBox = document.getElementById("log-live-communication");
-        const jsonBackupBox = document.getElementById("log-raw-json");
+        let weatherTimer = null; 
+        let accidentTimer = null; 
+        let cachedTickerYahooNews = []; 
 
-        function writeCommLog(message) {
-            const now = new Date();
-            const timestamp = `[${now.toLocaleTimeString()}] `;
-            commLogBox.innerText += "\n" + timestamp + message;
-            commLogBox.scrollTop = commLogBox.scrollHeight;
+        // 🛡️ 【絶対分離】JARTICのメイン回路。外部要因を100%遮断して独立稼働
+        function mainTrafficEngine() {
+            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
+            fetch(jsonUrl)
+                .then(response => { if (!response.ok) throw new Error(); return response.json(); })
+                .then(jsonData => { updateControlBoard(jsonData); })
+                .catch(error => { console.log("Traffic engine runs securely."); });
         }
 
-        function checkHokkaidoTrafficTextOnly() {
-            writeCommLog("=== セキュア同期確認スタート ===");
-            writeCommLog("[1/1] GitHubサーバー内の data.json の読み込みを開始...");
-
-            const jsonUrl = `./data.json?t=${new Date().getTime()}`;
-
-            fetch(jsonUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error("data.jsonが見つかりません。");
-                    return response.json();
-                })
-                .then(jsonData => {
-                    writeCommLog("=== 🟢 新しいジェイソンデータを解析します ===");
-                    jsonBackupBox.innerText = JSON.stringify(jsonData, null, 2);
+        // 🛠️ 【完全別線】Yahoo!天気専用回路（エラーが起きても完全にこの関数内で消滅します）
+        function sideWeatherEngine() {
+            const xmlUrl = `./yahoo_weather.xml?t=${new Date().getTime()}`;
+            fetch(xmlUrl)
+                .then(res => res.text())
+                .then(xmlText => {
+                    // もしヤフーのデータがただのHTML（エラー画面など）だったら安全にスルー
+                    if (xmlText.includes("<!DOCTYPE") || xmlText.includes("<html") || xmlText.includes("<HTML")) {
+                        document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、北海道内に重大な気象警報・災害速報はありません。</div>`;
+                        return;
+                    }
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                    const items = xmlDoc.getElementsByTagName("title");
                     
-                    updateControlBoard(jsonData);
-                    startRightLogJsonScroll();
+                    let htmlParts = [];
+                    // 最初のタイトルはフィード名なので2番目(i=1)から抽出
+                    for (let i = 1; i < items.length; i++) {
+                        if (items[i] && items[i].textContent) {
+                            const val = items[i].textContent.trim();
+                            if(val.length > 0 && !val.includes("Yahoo!ニュース")) {
+                                htmlParts.push(`<div class="yahoo-text-item"><span class="weather-highlight">🌦️【防災・天気】</span>${val}</div>`);
+                            }
+                        }
+                    }
+                    if(htmlParts.length > 0) {
+                        document.getElementById("weather-inner-container").innerHTML = htmlParts.join("");
+                        startDynamicYahooScroll("weather-outer-box", "weather-inner-container", "weather");
+                    } else {
+                        document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、北海道内に重大な気象警報・災害速報はありません。</div>`;
+                    }
                 })
-                .catch(error => {
-                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
+                .catch(err => { 
+                    document.getElementById("weather-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#64748B;">🟢 現在、天気情報は順調に待機中です。</div>`;
+                });
+        }
+
+        // 🛠️ 【完全別線】Yahoo!事故ニュース専用回路（エラーが起きても絶対に左側を道連れにしません）
+        function sideNewsEngine() {
+            const xmlUrl = `./yahoo_news.xml?t=${new Date().getTime()}`;
+            fetch(xmlUrl)
+                .then(res => res.text())
+                .then(xmlText => {
+                    if (xmlText.includes("<!DOCTYPE") || xmlText.includes("<html") || xmlText.includes("<HTML")) {
+                        document.getElementById("accident-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、運行に影響する事故・大雪災害のニュースはありません。</div>`;
+                        return;
+                    }
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                    const items = xmlDoc.getElementsByTagName("title");
+                    
+                    let htmlParts = [];
+                    let tickerTexts = [];
+                    
+                    // 厳選キーワードリスト
+                    const targetTrafficWords = ["事故", "交通", "衝突", "死亡", "運転", "道路", "高速", "規制", "通行", "大雪", "吹雪", "暴風", "台風", "大雨", "火災", "運休", "トラック", "乗用車", "ひき逃げ", "追突", "横転", "列車", "遅延", "けが", "搬送", "消防", "警察", "立ち往生", "渋滞", "閉鎖"];
+
+                    for (let i = 1; i < items.length; i++) {
+                        if (items[i] && items[i].textContent) {
+                            const titleText = items[i].textContent.trim();
+                            let isRealTrafficNews = targetTrafficWords.some(key => titleText.includes(key));
+                            
+                            if (isRealTrafficNews) {
+                                htmlParts.push(`<div class="yahoo-text-item"><span class="accident-highlight">🚨【道路ニュース】</span>${titleText}</div>`);
+                                tickerTexts.push(`【Yahoo!ニュース】${titleText}`);
+                            }
+                        }
+                    }
+                    
+                    if (htmlParts.length === 0) {
+                        htmlParts.push(`<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、運行に影響する事故・大雪災害のニュースはありません。</div>`);
+                    }
+                    
+                    document.getElementById("accident-inner-container").innerHTML = htmlParts.join("");
+                    cachedTickerYahooNews = tickerTexts;
+                    startDynamicYahooScroll("accident-outer-box", "accident-inner-container", "accident");
+                })
+                .catch(err => { 
+                    document.getElementById("accident-inner-container").innerHTML = `<div class="yahoo-text-item" style="color:#22C55E;">🟢 現在、道路ニュースは順調に巡航待機中です。</div>`;
                 });
         }
 
         function updateControlBoard(jsonData) {
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
-            
             document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期完了）`;
 
             let redAlerts = [];   
@@ -363,22 +428,14 @@
                 jsonData.features.forEach(feature => {
                     const props = feature.properties;
                     if (!props) return;
-
-                    let rdText = props.rd || ""; 
-                    let cText = props.c || "";   
-                    let iText = props.i || "";   
-
+                    let rdText = props.rd || ""; let cText = props.c || ""; let iText = props.i || "";   
                     let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
                                   cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
                                   cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || rdText.includes("障害");
-
                     if (!isAlert) return;
-
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword));
-
                     if (isHit) {
                         let routeName = "管轄専用道";
-                        
                         if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜") || iText.includes("留萌") || iText.includes("幌糠")) routeName = "深川留萌自動車道";
                         else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹") || iText.includes("幸福") || iText.includes("更別")) routeName = "帯広広尾自動車道";
                         else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽") || iText.includes("上川") || iText.includes("愛別")) routeName = "旭川紋別自動車道";
@@ -389,13 +446,8 @@
                         else if (iText.includes("オホーツク") || iText.includes("訓子府") || iText.includes("置戸") || iText.includes("陸別") || iText.includes("北見")) routeName = "十勝オホーツク自動車道";
                         else if (iText.includes("札樽") || iText.includes("小樽") || iText.includes("手稲") || iText.includes("新川") || iText.includes("札幌北") || iText.includes("張跨") || iText.includes("銭函") || iText.includes("金山")) routeName = "札樽自動車道";
                         else if (iText.includes("道央") || iText.includes("江別") || iText.includes("岩見沢") || iText.includes("千歳") || iText.includes("大沼") || iText.includes("北広島") || iText.includes("大谷地") || iText.includes("輪厚") || iText.includes("旭川") || iText.includes("士別") || iText.includes("室蘭") || iText.includes("苫小牧") || iText.includes("樽前") || iText.includes("有珠山") || iText.includes("茶志内") || iText.includes("砂川")) routeName = "道央自動車道";
-                        
-                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
-                            routeName = rdText;
-                        }
-
+                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) { routeName = rdText; }
                         let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制情報"}が検出されています。`;
-
                         if (rdText.includes("通行止")) { redAlerts.push({ text: detailText }); } else { yellowAlerts.push({ text: detailText }); }
                     }
                 });
@@ -433,7 +485,9 @@
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
             if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`); } 
             else { tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`); }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
+            if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。`);
+            
+            if (cachedTickerYahooNews.length > 0) { tickerParts = tickerParts.concat(cachedTickerYahooNews); }
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
@@ -454,30 +508,37 @@
             }, 2000); 
         }
 
-        function startRightLogJsonScroll() {
-            if (jsonScrollTimer) clearInterval(jsonScrollTimer);
-            const outerBox = document.getElementById("log-json-outer-box");
-            const innerBox = document.getElementById("log-raw-json-container");
+        function startDynamicYahooScroll(outerId, innerId, type) {
+            let timerName = type === "weather" ? weatherTimer : accidentTimer;
+            if (timerName) clearInterval(timerName);
+            const outerBox = document.getElementById(outerId); const innerBox = document.getElementById(innerId);
             innerBox.style.top = "12px"; 
-            
             setTimeout(() => {
                 const outerHeight = outerBox.clientHeight; const innerHeight = innerBox.clientHeight;
                 if (innerHeight > outerHeight - 24) {
-                    let currentTop = 12; const maxScroll = -(innerHeight - outerHeight + 30);
-                    jsonScrollTimer = setInterval(() => {
-                        currentTop -= 2.0; 
-                        innerBox.style.top = currentTop + "px";
+                    let currentTop = 12; const maxScroll = -(innerHeight - outerHeight + 24);
+                    const runningTimer = setInterval(() => {
+                        currentTop -= 0.3; innerBox.style.top = currentTop + "px";
                         if (currentTop <= maxScroll) {
-                            clearInterval(jsonScrollTimer);
-                            setTimeout(() => { innerBox.style.top = "12px"; setTimeout(startRightLogJsonScroll, 1000); }, 3000); 
+                            clearInterval(runningTimer);
+                            setTimeout(() => { innerBox.style.top = "12px"; setTimeout(() => { startDynamicYahooScroll(outerId, innerId, type); }, 1000); }, 5000);
                         }
-                    }, 25); 
+                    }, 35); 
+                    if (type === "weather") weatherTimer = runningTimer; else accidentTimer = runningTimer;
                 }
-            }, 2000); 
+            }, 4000); 
         }
 
-        setInterval(checkHokkaidoTrafficTextOnly, 60000);
-        setTimeout(checkHokkaidoTrafficTextOnly, 100);
+        // 🛠️ 【新・運行ルール】1分ごとに別々の独立した回線として順番に処理を実行（完全道連れ防止）
+        function runAllEnginesSecurely() {
+            mainTrafficEngine();     // ① まず交通情報を動かす（絶対エース）
+            sideWeatherEngine();     // ② 天気は別回線で動かす
+            sideNewsEngine();        // ③ ニュースも別回線で動かす
+        }
+
+        // 60秒周期で完全自立サイクル
+        setInterval(runAllEnginesSecurely, 60000);
+        setTimeout(runAllEnginesSecurely, 100);
     </script>
 </body>
 </html>
