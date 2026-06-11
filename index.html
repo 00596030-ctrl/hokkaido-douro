@@ -84,7 +84,6 @@
             flex-shrink: 0;
         }
 
-        /* 左メイン掲示板のラッパー */
         .board-content-wrapper {
             flex: 1;
             display: flex;
@@ -95,7 +94,6 @@
             box-sizing: border-box;
         }
 
-        /* 1階：通行止め固定エリア */
         #fixed-danger-zone {
             flex-shrink: 0;
             background-color: #000000;
@@ -103,7 +101,6 @@
             box-sizing: border-box;
         }
 
-        /* 2階：黄色い規制専用・外枠スクロールエリア */
         #scroll-outer-box {
             flex: 1;
             background-color: #000000;
@@ -132,7 +129,6 @@
             position: relative;
         }
 
-        /* 黄色カード内枠コンテナ */
         #scroll-inner-container {
             position: absolute;
             width: calc(100% - 30px);
@@ -140,12 +136,11 @@
             transition: top 0.3s ease-out; 
         }
 
-        /* 右下JSON用コンテナ */
         #log-raw-json-container {
             position: absolute;
             width: calc(100% - 24px);
             top: 12px;
-            transition: top 0.4s ease-out;
+            transition: top 0.2s ease-out; /* 追従性をさらに滑らかに */
         }
 
         .alert-item {
@@ -266,7 +261,7 @@
             <div class="board-content-wrapper">
                 <div id="fixed-danger-zone"></div>
                 
-                <div id="scroll-outer-box">
+                <div class="scroll-outer-box" id="scroll-outer-box">
                     <div id="scroll-inner-container">
                         <div class="no-alert" style="color: #64748B;">⚡ 道路交通情報を読み込んでいます...</div>
                     </div>
@@ -346,31 +341,21 @@
             let constCount = 0;  
 
             const targetKeywords = [
-                // 道央自動車道
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爷湖", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌南", "大谷地", "札幌IC", "江別西", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "虻田", "有珠山", "北吉原", "竹浦", "萩野", "錦岡", "苫小牧西", "苫小牧中央", "苫小牧東", 
                 "新千歳空港", "美沢", "祝梅", "茶志内", "奈井江砂川", "江部乙", "深川", "音江連山", "旭川鷹栖", "旭川北", "比布大雪", "比布JCT", "和寒", "士別剣淵", "道央", "札幌JCT",
                 "樽前", "樽前SA", "野幌PA", "比布PA", "有珠山SA", "本輪西", "本輪西PA", "富浦", "富浦PA", "美沢PA", "茶志内SA", "砂川SA", "音江連山PA",
-                // 札樽自動車道
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "伏古", "雁来", "小樽IC", "小樽JCT", "張碓", "金山", "札幌西", "張碓PA", "金山PA",
-                // 道東自動車道
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", 
                 "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "千歳恵庭JCT", "キウス", "由仁", "むかわ穂別", "十勝平原", "帯広JCT", "上浦幌", "釧路西", "大楽毛",
                 "由仁PA", "むかわ穂別PA", "占冠PA", "十勝平原SA", "長流枝PA",
-                // 深川留萌自動車道
                 "深川西", "秩父別", "沼田", "北竜ひまわり", "留萌大和田", "留萌", "幌糠",
-                // 旭川紋別自動車道
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽", "旭川紋別", "上川天幕", "上川層雲峡", "奥白滝",
-                // 日高自動車道
                 "沼ノ端", "苫東中央", "厚真", "鵡川", "汐見", "富川", "日高富川", "門別", "日高門別",
-                // 帯広広尾自動車道
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
-                // 名寄美深道路
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
-                // 釧路・根室専用道
                 "釧路中央", "釧路東", "別保", "尾幌", "糸魚沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                // 十勝オホーツク自動車道
                 "陸別", "置戸", "訓子府", "北見西", "北見北上", "北見中央", "北見川東", "北見東"
             ];
 
@@ -420,7 +405,6 @@
                 });
             }
 
-            // 特殊区間補正
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
                 redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -428,10 +412,10 @@
             if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
                 redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
             }
-            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {RedAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
+            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
+                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
 
-            // 重複除去
             let finalRedHTMLs = [];
             let finalYellowHTMLs = [];
             let seenTexts = new Set();
@@ -467,7 +451,6 @@
                 finalYellowHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【⚠️ 規制・障害情報】</span> ${item.text}</div>`);
             });
 
-            // 部屋への流し込み
             document.getElementById("fixed-danger-zone").innerHTML = finalRedHTMLs.join("");
             const innerContainer = document.getElementById("scroll-inner-container");
             
@@ -522,6 +505,7 @@
             }, 2000); 
         }
 
+        // 🎬 🛠️ 右側：ブレーキを解除し、移動量を「2.0」へ大増速した真の高速巡航エンジン
         function startRightLogJsonScroll() {
             if (jsonScrollTimer) clearInterval(jsonScrollTimer);
             
@@ -538,7 +522,7 @@
                     const maxScroll = -(innerHeight - outerHeight + 30);
                     
                     jsonScrollTimer = setInterval(() => {
-                        currentTop -= 1.0; 
+                        currentTop -= 2.0; // 🛠️ ここを 1.0 から 2.0 に大増速！一気にデータが流れるように変更
                         innerBox.style.top = currentTop + "px";
                         
                         if (currentTop <= maxScroll) {
@@ -548,12 +532,12 @@
                                 setTimeout(startRightLogJsonScroll, 1000); 
                             }, 3000); 
                         }
-                    }, 35); 
+                    }, 25); // 🛠️ 動く周期も 35ms から 25ms に縮めて、ヌルヌル感をMAXに強化
                 }
-            }, 2000); 
+            }, 1500); 
         }
 
-        writeCommLog("システム初期化完了。赤札絶対固定・2層管制レイアウト稼働。");
+        writeCommLog("システム初期化完了。赤札絶対固定・右ログ高速巡航版稼働。");
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
