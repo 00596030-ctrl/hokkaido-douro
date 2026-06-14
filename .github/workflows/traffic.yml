@@ -2,8 +2,8 @@ name: JARTICリアルタイム自動同期システム
 
 on:
   schedule:
-    # 1分ごとに裏で勝手にJARTICのデータを奪いに行く設定
-    - cron: '*/1 * * * *'
+    # ⏱️ 10分に1回、確実に、渋滞を回避して定期起動する設定に変えました
+    - cron: '*/10 * * * *'
   workflow_dispatch: # 手動で今すぐ実行するためのボタン
 
 jobs:
@@ -29,4 +29,11 @@ jobs:
         git config --global user.name "GitHub Actions Traffic Bot"
         git config --global user.email "actions@github.com"
         git add data.json
-        git diff --quiet && git diff --staged --quiet || (git commit -m "JARTIC最新交通情報自動同期" && git push)
+        
+        # 道路状況に変化がある（データの書き換えがあった）時だけ履歴を残してPushする安全弁
+        if git commit -m "JARTIC最新交通情報自動同期"; then
+          git push
+          echo "-> 道路状況の変化を検知したため、データを更新しました。"
+        else
+          echo "-> 道路データに変化がないため、書き込みをスキップしました。"
+        fi
