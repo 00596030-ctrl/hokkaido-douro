@@ -198,7 +198,7 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24H広域道路運行管制システム（現場完全同期・巡航版）</p>
+        <p id="status-text">● 24H広域道路運行管制システム（リアルタイムステータス完全同期版）</p>
     </div>
 
     <div class="main-dashboard-layout">
@@ -267,17 +267,19 @@
                     const props = feature.properties;
                     if (!props) return;
 
-                    let rdText = (props.rd || "").trim(); // 規制・障害・通行止めの文字
-                    let cText = (props.c || "").trim();   // 工事・作業の文字
-                    let iText = (props.i || "").trim();   // 区間・拠点名（例：江別東ＩＣなど）
-                    let nText = (props.n || "").trim();   // 補正用の拠点名
-
-                    // 🛡️ 【究極のシンプル判定】裏側のステータス文字（c または rd）が完全に空っぽのデータは「現在何も起きていない区間」なので100%破棄
-                    if (cText === "" && rdText === "") {
+                    // 🚨 【最重要：大誤爆の息の根を止める新フラグチェック】
+                    // props.st が 0、または未定義の場合は「現在規制なし（過去の履歴ゴミ）」なので絶対に1文字も読まずに強制排除
+                    let st = parseInt(props.st, 10);
+                    if (isNaN(st) || st === 0) {
                         return; 
                     }
 
-                    // 路線名の判別処理
+                    let rdText = (props.rd || "").trim(); 
+                    let cText = (props.c || "").trim();   
+                    let iText = (props.i || "").trim();   
+                    let nText = (props.n || "").trim();   
+
+                    // 路線名の特定
                     let routeName = "北海道専用道";
                     let fullTextForRoute = iText + nText + rdText + cText;
                     
@@ -292,25 +294,22 @@
                     else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見")) routeName = "十勝オホーツク自動車道";
                     else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
 
-                    // 「付近付近」のダブリを根底から消し去るための究極のクリーンアップ
+                    // 「付近付近」の重複文字を全消去して統一
                     let locationStr = iText || nText || "管轄区間";
-                    locationStr = locationStr.replace(/付近/g, ""); // 含まれる「付近」を一旦全消去
+                    locationStr = locationStr.replace(/付近/g, ""); 
 
-                    // 最後に1つだけ「付近」をガッチャンコする
                     let detailText = `${routeName}：${locationStr}付近において、${cText || rdText}が検出されています。`;
-                    
-                    // 「規制なし：」というシステム用文字の除去
                     detailText = detailText.replace("規制なし：", "");
 
-                    // 💥 判定：本当に、今現場の「rdText（現在発生中の障害）」に、通行止・事故・障害が書き込まれている場合のみ左側（赤）へ
-                    if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
+                    // 💥 分類判定：現在本当に有効な規制(st > 0)の中で、通行止・事故・障害の文字が刻まれているなら左側（赤札）へ
+                    if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害") || cText.includes("通行止") || cText.includes("事故") || cText.includes("障害")) {
                         let typeTag = "【🚨 通行止め】";
-                        if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
-                        else if (rdText.includes("障害")) typeTag = "【📦 路上障害】";
+                        if (rdText.includes("事故") || cText.includes("事故")) typeTag = "【💥 事故発生】";
+                        else if (rdText.includes("障害") || cText.includes("障害")) typeTag = "【📦 路上障害】";
                         
                         redAlerts.push({ text: detailText, tag: typeTag });
                     } else {
-                        // 🚧 それ以外の、リアルタイムに書き込まれた「工事・車線規制・補修」はすべて右側（黄）へ
+                        // 🚧 純粋な現行工事規制はすべて右側（黄札）へ
                         yellowAlerts.push({ text: detailText });
                     }
                 });
@@ -347,7 +346,7 @@
             } else { rightInner.innerHTML = finalYellowHTMLs.join(""); startAutoScrollEngine("right"); }
 
             // テロップ更新
-            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】現場完全同期・左右独立巡航中`];
+            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】ステータス完全同期・左右独立巡航中`];
             if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
             else { tickerParts.push("🟢現在、広域管制経路内に通行止めや大事故情報はありません。"); }
             if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修を作業計 ${constCount} 件検出。`);
