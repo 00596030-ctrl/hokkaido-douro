@@ -286,8 +286,8 @@
                     const props = feature.properties;
                     if (!props) return;
 
-                    let rdText = (props.rd || "").toString().trim(); // 純粋な現在の障害内容
-                    let cText = (props.c || "").toString().trim();   // 純粋な現在の工事内容
+                    let rdText = (props.rd || "").toString().trim(); // 障害内容（事故、通行止など）
+                    let cText = (props.c || "").toString().trim();   // 工事内容（片側通行、工事など）
                     let iText = (props.i || "").toString().trim();   // 発生区間名
                     let nText = (props.n || "").toString().trim();   // 拠点名称
 
@@ -304,10 +304,18 @@
 
                     if (!isAlert) return;
 
-                    // 🌟 2. 監視キーワードに部分一致しているかチェック（網から漏らさない）
+                    // 🌟 2. 監視キーワードに部分一致しているかチェック
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
                     if (isHit) {
+                        // 🛡️ 【最重要：JARTICの裏データ残骸（ゾンビ）を完全に焼き尽くす絶対条件】
+                        // 障害枠（rdText）に「事故」や「障害」という文字が入っているのに、
+                        // 工事枠（cText）に文字が入っているデータは、JARTICが裏側に残している解除済みの【100%完全なゴミデータ】。
+                        // これを右側にも左側にも絶対に出させず、この瞬間に永久に強制破棄する！
+                        if ((rdText.includes("事故") || rdText.includes("障害")) && cText !== "") {
+                            return; 
+                        }
+
                         let routeName = "管轄専用道";
                         let fullTextForRoute = iText + nText + rdText + cText;
                         
@@ -331,36 +339,22 @@
                             displayLocation = displayLocation.slice(0, -2);
                         }
 
-                        // 🌟 【最重要：大誤爆を根絶する完璧なテキスト仕分け】
-                        // 裏データに隠れた過去の事故文字を現在の工事テキストに上書きさせない処理
-                        let actualStatusText = cText || rdText;
-                        if (cText !== "" && rdText !== "") {
-                            // もし工事枠(cText)にも文字があり、障害枠(rdText)にも文字がある場合、
-                            // JARTICの構造上、150%「現行の工事」が正解なので、工事側のテキストを最優先として採用する！
-                            actualStatusText = cText;
-                        }
-
-                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
+                        let detailText = `${routeName}：${displayLocation}付近において、${cText || rdText}が検出されています。`;
                         detailText = detailText.replace("規制なし：", "");
 
                         if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
                             return; 
                         }
 
-                        // 🛡️ 【絶対防壁②】
-                        // 工事枠（cText）に文字が入っているデータは、裏側にどれだけ過去の事故文字が残っていようとも、
-                        // 100%絶対に「右側（黄札：規制・工事）」へ強制収容する！左側への大誤爆を完全に不可能でする。
-                        if (cText !== "") {
-                            yellowAlerts.push({ text: detailText });
-                        } 
-                        // 工事枠が完全に空っぽであり、純粋にrdText（障害枠）だけに通行止・事故・障害が刻まれている場合のみ左側（赤札）へ
-                        else if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
+                        // 💥 分類判定：純粋にrdText（障害枠）だけに現行のトラブルが刻まれている場合のみ左側（赤札）へ
+                        if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
                             let typeTag = "【🚨 通行止め】";
                             if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
                             else if (rdText.includes("障害")) typeTag = "【📦 路上障害】";
                             
                             redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
+                            // 🚧 純粋な現行工事規制はすべて右側（黄札）へ
                             yellowAlerts.push({ text: detailText });
                         }
                     }
