@@ -203,7 +203,7 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24H広域道路運行管制システム（左右分離独立監視版）</p>
+        <p id="status-text">● 24H広域道路运行管制システム（左右分離独立監視版）</p>
     </div>
 
     <div class="main-dashboard-layout">
@@ -270,9 +270,9 @@
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田洞爷湖", "虻田洞爺湖", "伊達", "室蘭", "登別", "白老", "苫小牧", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌南", "大谷地", "札幌IC", "江別西", "江別東", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
-                "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "虻田", "有珠山", "北吉原", "竹浦", "萩野", "錦岡", "苫小牧西", "苫小牧中央", "苫小牧東", 
+                "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "虻田", "有珠山", "北吉原", "竹浦", "萩野", "錦岡", "苫小牧西", "苫小牧中央", "苫東", "苫小牧東", 
                 "新千歳空港", "美沢", "祝梅", "茶志内", "奈井江砂川", "江部乙", "深川", "音江連山", "旭川鷹栖", "旭川北", "比布大雪", "比布JCT", "和寒", "士別剣淵", "道央", "札幌JCT",
-                "樽前", "樽前SA", "野幌PA", "比布PA", "有珠山SA", "本輪西", "本輪西PA", "富浦", "富浦PA", "美沢PA", "茶志内SA", "砂川SA", "音江連山PA",
+                "樽前", "野幌PA", "比布PA", "有珠山SA", "本輪西", "本輪西PA", "富浦", "富浦PA", "美沢PA", "茶志内SA", "砂川SA", "音江連山PA",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "札幌北", "伏古", "雁来", "小樽IC", "小樽JCT", "張碓", "金山", "札幌西", "張碓PA", "金山PA",
                 "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "追分町", 
                 "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "千歳恵庭JCT", "キウス", "由仁", "むかわ穂別", "十勝平原", "帯広JCT", "上浦幌", "釧路西", "大楽毛",
@@ -297,7 +297,8 @@
 
                     let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
                                   cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
-                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || rdText.includes("障害");
+                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || 
+                                  rdText.includes("障害") || cText.includes("障害");
 
                     if (!isAlert) return;
 
@@ -320,17 +321,22 @@
                             routeName = rdText;
                         }
 
-                        // 🛠️ 【付近付近のダブリを根絶】iTextにすでに「付近」と入っていれば、削って1つにする
-                        let cleanLocation = iText;
-                        if (cleanLocation.endsWith("付近")) {
-                            cleanLocation = cleanLocation.slice(0, -2);
-                        }
+                        // 🛠️ 【新・付近付近対策】文章中のすべての「付近」という文字を一旦すべて消去する
+                        let cleanLocation = iText.replace(/付近/g, "");
 
+                        // その上で、最後に1つだけ「付近」を綺麗にくっつける
                         let detailText = `${routeName}：${cleanLocation}付近において、${cText || rdText || "規制情報"}が検出されています。`;
 
-                        // 🛠️ 【重要】「通行止」だけでなく、「事故」「障害」という文字が入っていたら、強制的に最優先（左側・赤札）へ叩き込む
+                        // 🛠️ 「規制なし」というゴミ文字が含まれていたら消去して綺麗にする
+                        detailText = detailText.replace("規制なし：", "");
+
+                        // 🛠️ 分類判定：「通行止」「事故」「障害」が入っていたら無条件で最優先（左側・赤札）へ
                         if (rdText.includes("通行止") || rdText.includes("事故") || cText.includes("事故") || rdText.includes("障害") || cText.includes("障害")) {
-                            redAlerts.push({ text: detailText, type: (rdText.includes("通行止") ? "通行止" : "緊急障害") });
+                            let typeTag = "【🚨 通行止め】";
+                            if (rdText.includes("事故") || cText.includes("事故")) typeTag = "【💥 事故発生】";
+                            else if (rdText.includes("障害") || cText.includes("障害")) typeTag = "【📦 路上障害】";
+                            
+                            redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
                             yellowAlerts.push({ text: detailText });
                         }
@@ -338,17 +344,7 @@
                 });
             }
 
-            // 特例コードの引き継ぎ
-            const rawText = JSON.stringify(jsonData);
-            if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
-                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。", type: "通行止" });
-            }
-            if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
-                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。", type: "通行止" });
-            }
-            if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
-                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。", type: "通行止" });
-            }
+            // 🛠️ 【完全撤廃】悪さをしていた「過去のゾンビ特例コード」をここから全て根こそぎ消去しました。
 
             // 重複排除処理
             let finalRedHTMLs = []; let finalYellowHTMLs = [];
@@ -359,10 +355,7 @@
                 let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
                 if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
                 seenTexts.add(item.text); closedCount++;
-
-                // 左側のタグ文字を内容によって「通行止め」か「緊急障害」に自動で切り替え
-                let tagStr = item.type === "通行止" ? "【🚨 通行止め】" : "【💥 緊急障害】";
-                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">${tagStr}</span> ${item.text}</div>`);
+                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">${item.tag}</span> ${item.text}</div>`);
             });
 
             yellowAlerts.forEach(item => {
