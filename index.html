@@ -198,7 +198,7 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24H広域道路運行管制システム（ゾンビデータ完全封殺版）</p>
+        <p id="status-text">● 24H広域道路運行管制システム（データ構造完全最適化版）</p>
     </div>
 
     <div class="main-dashboard-layout">
@@ -262,7 +262,7 @@
             let closedCount = 0; 
             let constCount = 0;  
 
-            // 📊 運行管制網（152拠点を網羅する最強の地引き網キーワード）
+            // 📊 運行管制網（152拠点を完全網羅する地引き網リスト）
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
@@ -286,19 +286,17 @@
                     const props = feature.properties;
                     if (!props) return;
 
-                    let rdText = (props.rd || "").toString().trim(); 
-                    let cText = (props.c || "").toString().trim();   
-                    let iText = (props.i || "").toString().trim();   
-                    let nText = (props.n || "").toString().trim();   
+                    let rdText = (props.rd || "").toString().trim(); // 純粋な現在の障害内容
+                    let cText = (props.c || "").toString().trim();   // 純粋な現在の工事内容
+                    let iText = (props.i || "").toString().trim();   // 発生区間名
+                    let nText = (props.n || "").toString().trim();   // 拠点名称
 
-                    // 🛡️ 【新・絶対防壁：日高門別ゾンビの個別ID狙い撃ち完全抹殺】
-                    // 元データ上で日高門別IC→日高厚賀ICの区間案内（iText）が含まれ、かつ内容が事故/通行止めの残骸データは、
-                    // JARTICのデータ消去漏れ（ゾンビ）確定のため、ここで1文字も見ずに完全強制破棄する！
+                    // 🛡️ 【絶対防壁①：消去漏れ日高門別ゾンビの個別ID狙い撃ち完全破棄】
                     if (iText.includes("日高門別") && iText.includes("日高厚賀")) {
                         return; 
                     }
 
-                    // 🌟 1. 工事または障害の文字が書き込まれている有効なデータであるか判定
+                    // 🌟 1. 文字情報が書き込まれている有効なデータであるか判定
                     let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
                                   cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
                                   cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || 
@@ -306,7 +304,7 @@
 
                     if (!isAlert) return;
 
-                    // 🌟 2. 監視キーワードに部分一致しているかチェック（網から漏れないようにする）
+                    // 🌟 2. 監視キーワードに部分一致しているかチェック（網から漏らさない）
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
                     if (isHit) {
@@ -328,29 +326,41 @@
                             routeName = rdText;
                         }
 
-                        // 安全な末尾のトリミング（付近付近の根絶）
                         let displayLocation = iText || nText || "管轄区間";
                         if (displayLocation.endsWith("付近")) {
                             displayLocation = displayLocation.slice(0, -2);
                         }
 
-                        let detailText = `${routeName}：${displayLocation}付近において、${cText || rdText || "規制情報"}が検出されています。`;
+                        // 🌟 【最重要：大誤爆を根絶する完璧なテキスト仕分け】
+                        // 裏データに隠れた過去の事故文字を現在の工事テキストに上書きさせない処理
+                        let actualStatusText = cText || rdText;
+                        if (cText !== "" && rdText !== "") {
+                            // もし工事枠(cText)にも文字があり、障害枠(rdText)にも文字がある場合、
+                            // JARTICの構造上、150%「現行の工事」が正解なので、工事側のテキストを最優先として採用する！
+                            actualStatusText = cText;
+                        }
+
+                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
                         detailText = detailText.replace("規制なし：", "");
 
-                        // 重複した同一文章の登録を防ぐガード
                         if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
                             return; 
                         }
 
-                        // 💥 分類判定：「通行止」「事故」「障害」が入っていたら無条件で左側（赤札）へ
-                        if (rdText.includes("通行止") || rdText.includes("事故") || cText.includes("事故") || rdText.includes("障害") || cText.includes("障害")) {
+                        // 🛡️ 【絶対防壁②】
+                        // 工事枠（cText）に文字が入っているデータは、裏側にどれだけ過去の事故文字が残っていようとも、
+                        // 100%絶対に「右側（黄札：規制・工事）」へ強制収容する！左側への大誤爆を完全に不可能でする。
+                        if (cText !== "") {
+                            yellowAlerts.push({ text: detailText });
+                        } 
+                        // 工事枠が完全に空っぽであり、純粋にrdText（障害枠）だけに通行止・事故・障害が刻まれている場合のみ左側（赤札）へ
+                        else if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
                             let typeTag = "【🚨 通行止め】";
-                            if (rdText.includes("事故") || cText.includes("事故")) typeTag = "【💥 事故発生】";
-                            else if (rdText.includes("障害") || cText.includes("障害")) typeTag = "【📦 路上障害】";
+                            if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
+                            else if (rdText.includes("障害")) typeTag = "【📦 路上障害】";
                             
                             redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
-                            // 🚧 工事などはすべて右側（黄札）へ
                             yellowAlerts.push({ text: detailText });
                         }
                     }
