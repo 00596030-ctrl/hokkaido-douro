@@ -44,7 +44,6 @@
             font-weight: bold;
         }
 
-        /* 画面を均等に左右2分割するレイアウト */
         .main-dashboard-layout {
             display: flex;
             gap: 15px;
@@ -55,7 +54,7 @@
         }
 
         .board-container {
-            flex: 1; /* 左右を50%ずつの均等幅にする */
+            flex: 1; 
             display: flex;
             flex-direction: column;
             background-color: #020617;
@@ -66,14 +65,12 @@
             overflow: hidden;
         }
 
-        /* 左側（重大障害）の枠枠 */
         .info-left {
-            border-color: #EF4444; /* 赤枠で強調 */
+            border-color: #EF4444; 
         }
 
-        /* 右側（一般規制）の枠枠 */
         .info-right {
-            border-color: #F59E0B; /* 黄枠で強調 */
+            border-color: #F59E0B; 
         }
 
         .board-title {
@@ -107,9 +104,8 @@
             transition: top 0.3s ease-out; 
         }
 
-        /* 通行止め用（赤札）のデザイン */
         .alert-item-red {
-            font-size: 20px; /* 文字を大きく太く見やすく */
+            font-size: 20px; 
             line-height: 1.6;
             margin-bottom: 14px;
             padding: 16px 20px;
@@ -124,7 +120,6 @@
             font-weight: bold;
         }
 
-        /* 工事・一般規制用（黄札）のデザイン */
         .alert-item-yellow {
             font-size: 18px;
             line-height: 1.6;
@@ -152,7 +147,6 @@
         .no-alert-green { color: #22C55E; }
         .no-alert-gray { color: #64748B; }
 
-        /* 下部流れるテロップ */
         .ticker-container {
             width: 100%;
             height: 75px; 
@@ -215,7 +209,7 @@
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title left-title"><span>🚨 重大障害・通行止め情報（最優先）</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:13px;">（同期中）</span></p>
+            <p class="board-title left-title"><span>🚨 重大障害・通行止め・事故情報（最優先）</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:13px;">（同期中）</span></p>
             <div class="board-content-wrapper" id="left-outer-box">
                 <div class="scroll-inner-container" id="left-inner-container">
                     <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
@@ -326,10 +320,17 @@
                             routeName = rdText;
                         }
 
-                        let detailText = `${routeName}：${iText}付近において、${cText || rdText || "規制情報"}が検出されています。`;
+                        // 🛠️ 【付近付近のダブリを根絶】iTextにすでに「付近」と入っていれば、削って1つにする
+                        let cleanLocation = iText;
+                        if (cleanLocation.endsWith("付近")) {
+                            cleanLocation = cleanLocation.slice(0, -2);
+                        }
 
-                        if (rdText.includes("通行止")) {
-                            redAlerts.push({ text: detailText });
+                        let detailText = `${routeName}：${cleanLocation}付近において、${cText || rdText || "規制情報"}が検出されています。`;
+
+                        // 🛠️ 【重要】「通行止」だけでなく、「事故」「障害」という文字が入っていたら、強制的に最優先（左側・赤札）へ叩き込む
+                        if (rdText.includes("通行止") || rdText.includes("事故") || cText.includes("事故") || rdText.includes("障害") || cText.includes("障害")) {
+                            redAlerts.push({ text: detailText, type: (rdText.includes("通行止") ? "通行止" : "緊急障害") });
                         } else {
                             yellowAlerts.push({ text: detailText });
                         }
@@ -340,13 +341,13 @@
             // 特例コードの引き継ぎ
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
-                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
+                redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。", type: "通行止" });
             }
             if ((rawText.includes("占冠") || rawText.includes("占跨")) && (rawText.includes("追分")) && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("追分"))) {
-                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。" });
+                redAlerts.push({ text: "道東自動車道：追分町ＩＣ～占冠ＩＣ間が、現在通行止めとなっています。", type: "通行止" });
             }
             if (rawText.includes("トマム") && rawText.includes("清水") && !redAlerts.some(a => a.text.includes("道東自動車道") && a.text.includes("トマム"))) {
-                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
+                redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。", type: "通行止" });
             }
 
             // 重複排除処理
@@ -358,7 +359,10 @@
                 let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
                 if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
                 seenTexts.add(item.text); closedCount++;
-                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">【🚨 通行止め】</span> ${item.text}</div>`);
+
+                // 左側のタグ文字を内容によって「通行止め」か「緊急障害」に自動で切り替え
+                let tagStr = item.type === "通行止" ? "【🚨 通行止め】" : "【💥 緊急障害】";
+                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">${tagStr}</span> ${item.text}</div>`);
             });
 
             yellowAlerts.forEach(item => {
@@ -369,10 +373,10 @@
                 finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【⚠️ 規制・工事】</span> ${item.text}</div>`);
             });
 
-            // 📺 【左側：重大障害】の描画・スクロール制御
+            // 左側（重大障害）描画
             const leftInner = document.getElementById("left-inner-container");
             if (finalRedHTMLs.length === 0) {
-                leftInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、道内指定経路内に<br>通行止め等の重大障害はありません。</div>`;
+                leftInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、道内指定経路内に<br>通行止めや事故等の重大障害はありません。</div>`;
                 leftInner.style.top = "15px";
                 if (leftScrollTimer) clearInterval(leftScrollTimer);
             } else {
@@ -380,7 +384,7 @@
                 startAutoScrollEngine("left");
             }
 
-            // 📺 【右側：工事規制】の描画・スクロール制御
+            // 右側（工事規制）描画
             const rightInner = document.getElementById("right-inner-container");
             if (finalYellowHTMLs.length === 0) {
                 rightInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、道内指定経路内に<br>工事・車線規制情報はありません。</div>`;
@@ -393,13 +397,12 @@
 
             // 下部テロップの更新
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】左右分離独立監視システム巡航中`];
-            if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。`); } 
-            else { tickerParts.push(`🟢現在、広域管制経路内に大事故等による通行止め情報はありません。`); }
+            if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
+            else { tickerParts.push(`🟢現在、広域管制経路内に通行止めや大事故情報はありません。`); }
             if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修を作業計 ${constCount} 件検出。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // 🚀 左右のスクロールを完全に独立して制御するエンジン
         function startAutoScrollEngine(side) {
             if (side === "left" && leftScrollTimer) clearInterval(leftScrollTimer);
             if (side === "right" && rightScrollTimer) clearInterval(rightScrollTimer);
@@ -423,7 +426,7 @@
                             setTimeout(() => {
                                 innerBox.style.top = "15px";
                                 setTimeout(() => startAutoScrollEngine(side), 1000); 
-                            }, 3000); // 下まで流れたら3秒キープして先頭に戻る
+                            }, 3000); 
                         }
                     }, 40); 
 
@@ -433,7 +436,7 @@
             }, 2000); 
         }
 
-        setInterval(checkHokkaidoTrafficTextOnly, 60000); // 1分ごとに画面内のデータを再リロード
+        setInterval(checkHokkaidoTrafficTextOnly, 60000); 
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
