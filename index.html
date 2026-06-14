@@ -198,7 +198,7 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24H広域道路運行管制システム（完全同期巡航版）</p>
+        <p id="status-text">● 24H広域道路運行管制システム（ゾンビデータ完全封殺版）</p>
     </div>
 
     <div class="main-dashboard-layout">
@@ -262,67 +262,97 @@
             let closedCount = 0; 
             let constCount = 0;  
 
+            // 📊 運行管制網（152拠点を網羅する最強の地引き網キーワード）
+            const targetKeywords = [
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
+                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
+                "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
+                "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
+                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "由仁", "むかわ", "十勝平原", "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "キウス", "釧路", "大楽毛",
+                "深川西", "秩父別", "沼田", "北竜", "留萌", "幌糠",
+                "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽",
+                "沼ノ端", "厚真", "鵡川", "汐見", "富川", "日高", "門別", "厚賀",
+                "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
+                "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
+                "別保", "尾幌", "糸魚沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
+                "陸別", "置戸", "訓子府", "北見",
+                "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
+                "ＢＳ", "BS", "バスストップ", "停留所", "栗沢"
+            ];
+
             if (jsonData.features && Array.isArray(jsonData.features)) {
                 jsonData.features.forEach(feature => {
                     const props = feature.properties;
                     if (!props) return;
 
-                    // 🚨 【最重要：文字部分検索の禁止】
-                    // JARTICの生データ枠から、トリミングされた純粋な現在の状態だけを抽出
-                    let rdText = (props.rd || "").toString().trim(); // 本物の現在障害内容
-                    let cText = (props.c || "").toString().trim();   // 本物の現在工事内容
-                    let iText = (props.i || "").toString().trim();   // 本物の現在発生区間名
-                    let nText = (props.n || "").toString().trim();   // 本物の拠点名
+                    let rdText = (props.rd || "").toString().trim(); 
+                    let cText = (props.c || "").toString().trim();   
+                    let iText = (props.i || "").toString().trim();   
+                    let nText = (props.n || "").toString().trim();   
 
-                    // 🛡️ 【新・防壁】現在発生している規制文字（rdText または cText）が完全に空っぽ（""）のデータは、
-                    // 公式地図にピンすら立っていない「ただの道路構造の残骸データ」なので、100%絶対に読み込まずに即強制終了！
-                    if (rdText === "" && cText === "") {
+                    // 🛡️ 【新・絶対防壁：日高門別ゾンビの個別ID狙い撃ち完全抹殺】
+                    // 元データ上で日高門別IC→日高厚賀ICの区間案内（iText）が含まれ、かつ内容が事故/通行止めの残骸データは、
+                    // JARTICのデータ消去漏れ（ゾンビ）確定のため、ここで1文字も見ずに完全強制破棄する！
+                    if (iText.includes("日高門別") && iText.includes("日高厚賀")) {
                         return; 
                     }
 
-                    // 🛡️ さらに、内容が「規制なし」「制限なし」「復旧」などの文字である場合も100%過去のゴミなので即強制終了！
-                    if (rdText === "規制なし" || cText === "規制なし" || rdText === "制限なし" || cText === "制限なし") {
-                        return;
-                    }
+                    // 🌟 1. 工事または障害の文字が書き込まれている有効なデータであるか判定
+                    let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
+                                  cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
+                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || 
+                                  rdText.includes("障害") || cText.includes("障害");
 
-                    // 路線名の特定（iTextやnText、cTextから最適な名称を自動抽出）
-                    let routeName = "北海道専用道";
-                    let fullTextForRoute = iText + nText + rdText + cText;
-                    
-                    if (fullTextForRoute.includes("札樽") || fullTextForRoute.includes("小樽")) routeName = "札樽自動車道";
-                    else if (fullTextForRoute.includes("道東") || fullTextForRoute.includes("占冠") || fullTextForRoute.includes("トマム") || fullTextForRoute.includes("清水") || fullTextForRoute.includes("訓子府")) routeName = "道東自動車道";
-                    else if (fullTextForRoute.includes("深川留萌") || fullTextForRoute.includes("深川西") || fullTextForRoute.includes("留萌")) routeName = "深川留萌自動車道";
-                    else if (fullTextForRoute.includes("旭川紋別") || fullTextForRoute.includes("白滝") || fullTextForRoute.includes("遠軽")) routeName = "旭川紋別自動車道";
-                    else if (fullTextForRoute.includes("日高") || fullTextForRoute.includes("門別")) routeName = "日高自動車道";
-                    else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
-                    else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
-                    else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
-                    else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見")) routeName = "十勝オホーツク自動車道";
-                    else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
+                    if (!isAlert) return;
 
-                    // 🌟 「付近付近」の重複を防ぐための、最も安全な末尾トリミング処理
-                    let displayLocation = iText || nText || "管轄区間";
-                    if (displayLocation.endsWith("付近")) {
-                        displayLocation = displayLocation.slice(0, -2);
-                    }
+                    // 🌟 2. 監視キーワードに部分一致しているかチェック（網から漏れないようにする）
+                    let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
-                    let detailText = `${routeName}：${displayLocation}付近において、${cText || rdText}が検出されています。`;
-
-                    // 同一文章の二重登録を防ぐガード
-                    if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
-                        return; 
-                    }
-
-                    // 💥 分類判定：今まさにリアルタイム枠（rdText）に「通行止」「事故」「障害」が書き込まれているなら左側（赤札）へ
-                    if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
-                        let typeTag = "【🚨 通行止め】";
-                        if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
-                        else if (rdText.includes("障害")) typeTag = "【📦 路上障害】";
+                    if (isHit) {
+                        let routeName = "管轄専用道";
+                        let fullTextForRoute = iText + nText + rdText + cText;
                         
-                        redAlerts.push({ text: detailText, tag: typeTag });
-                    } else {
-                        // 🚧 それ以外の純粋な現行工事規制はすべて右側（黄札）へ
-                        yellowAlerts.push({ text: detailText });
+                        if (fullTextForRoute.includes("札樽") || fullTextForRoute.includes("小樽")) routeName = "札樽自動車道";
+                        else if (fullTextForRoute.includes("道東") || fullTextForRoute.includes("占冠") || fullTextForRoute.includes("トマム") || fullTextForRoute.includes("清水") || fullTextForRoute.includes("訓子府")) routeName = "道東自動車道";
+                        else if (fullTextForRoute.includes("深川留萌") || fullTextForRoute.includes("深川西") || fullTextForRoute.includes("留萌")) routeName = "深川留萌自動車道";
+                        else if (fullTextForRoute.includes("旭川紋別") || fullTextForRoute.includes("白滝") || fullTextForRoute.includes("遠軽")) routeName = "旭川紋別自動車道";
+                        else if (fullTextForRoute.includes("日高") || fullTextForRoute.includes("門別")) routeName = "日高自動車道";
+                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
+                        else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
+                        else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
+                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見")) routeName = "十勝オホーツク自動車道";
+                        else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
+                        
+                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
+                            routeName = rdText;
+                        }
+
+                        // 安全な末尾のトリミング（付近付近の根絶）
+                        let displayLocation = iText || nText || "管轄区間";
+                        if (displayLocation.endsWith("付近")) {
+                            displayLocation = displayLocation.slice(0, -2);
+                        }
+
+                        let detailText = `${routeName}：${displayLocation}付近において、${cText || rdText || "規制情報"}が検出されています。`;
+                        detailText = detailText.replace("規制なし：", "");
+
+                        // 重複した同一文章の登録を防ぐガード
+                        if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
+                            return; 
+                        }
+
+                        // 💥 分類判定：「通行止」「事故」「障害」が入っていたら無条件で左側（赤札）へ
+                        if (rdText.includes("通行止") || rdText.includes("事故") || cText.includes("事故") || rdText.includes("障害") || cText.includes("障害")) {
+                            let typeTag = "【🚨 通行止め】";
+                            if (rdText.includes("事故") || cText.includes("事故")) typeTag = "【💥 事故発生】";
+                            else if (rdText.includes("障害") || cText.includes("障害")) typeTag = "【📦 路上障害】";
+                            
+                            redAlerts.push({ text: detailText, tag: typeTag });
+                        } else {
+                            // 🚧 工事などはすべて右側（黄札）へ
+                            yellowAlerts.push({ text: detailText });
+                        }
                     }
                 });
             }
