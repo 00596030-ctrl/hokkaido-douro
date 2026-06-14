@@ -32,18 +32,19 @@
 
         .header-container h1 {
             margin: 0;
-            font-size: 26px;
+            font-size: 28px;
             color: #38BDF8;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
 
         #status-text {
             font-size: 13px;
-            color: #E2E8F0;
+            color: #94A3B8;
             margin: 2px 0 0 0;
             font-weight: bold;
         }
 
+        /* 画面を均等に左右2分割するレイアウト */
         .main-dashboard-layout {
             display: flex;
             gap: 15px;
@@ -54,6 +55,7 @@
         }
 
         .board-container {
+            flex: 1; /* 左右を50%ずつの均等幅にする */
             display: flex;
             flex-direction: column;
             background-color: #020617;
@@ -61,139 +63,96 @@
             border-radius: 16px;
             padding: 18px;
             box-sizing: border-box;
+            overflow: hidden;
         }
 
+        /* 左側（重大障害）の枠枠 */
         .info-left {
-            width: 70%;
+            border-color: #EF4444; /* 赤枠で強調 */
         }
 
-        .stream-right {
-            width: 30%;
-            gap: 10px; 
+        /* 右側（一般規制）の枠枠 */
+        .info-right {
+            border-color: #F59E0B; /* 黄枠で強調 */
         }
 
         .board-title {
-            color: #38BDF8;
-            font-size: 16px;
+            font-size: 18px;
             margin: 0 0 12px 0;
             font-weight: bold;
-            border-bottom: 1px solid #1E293B;
-            padding-bottom: 6px;
+            border-bottom: 2px solid #1E293B;
+            padding-bottom: 8px;
             display: flex;
             justify-content: space-between;
             flex-shrink: 0;
         }
 
+        .left-title { color: #FCA5A5; }
+        .right-title { color: #FDE047; }
+
         .board-content-wrapper {
             flex: 1;
-            display: flex;
-            flex-direction: column;
             background-color: #000000;
             border-radius: 8px;
+            padding: 15px;
             overflow: hidden;
-            box-sizing: border-box;
-        }
-
-        #fixed-danger-zone {
-            flex-shrink: 0;
-            background-color: #000000;
-            padding: 15px 15px 5px 15px;
-            box-sizing: border-box;
-        }
-
-        #scroll-outer-box {
-            flex: 1;
-            background-color: #000000;
-            padding: 5px 15px 15px 15px;
-            overflow: hidden; 
             box-sizing: border-box;
             position: relative;
         }
 
-        .log-half-box {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .log-scroll-area {
-            flex: 1;
-            background-color: #000000;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #1E293B;
-            overflow-y: auto;
-            margin: 0;
-            box-sizing: border-box;
-            position: relative;
-        }
-
-        #scroll-inner-container {
+        .scroll-inner-container {
             position: absolute;
             width: calc(100% - 30px);
-            top: 5px;
+            top: 15px;
             transition: top 0.3s ease-out; 
         }
 
-        #log-raw-json-container {
-            position: absolute;
-            width: calc(100% - 24px);
-            top: 12px;
-            transition: top 0.2s ease-out; /* 追従性をさらに滑らかに */
-        }
-
-        .alert-item {
-            font-size: 18px;
+        /* 通行止め用（赤札）のデザイン */
+        .alert-item-red {
+            font-size: 20px; /* 文字を大きく太く見やすく */
             line-height: 1.6;
-            margin-bottom: 12px;
-            padding: 12px 18px;
+            margin-bottom: 14px;
+            padding: 16px 20px;
             border-radius: 8px;
-            border-left: 6px solid #EF4444;
-            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 8px solid #EF4444;
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #FCA5A5;
         }
         
-        .alert-closed {
+        .alert-closed-tag {
             color: #EF4444;
             font-weight: bold;
         }
 
-        .alert-construction {
+        /* 工事・一般規制用（黄札）のデザイン */
+        .alert-item-yellow {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            padding: 14px 18px;
+            border-radius: 8px;
+            border-left: 6px solid #F59E0B;
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #FDE047;
+        }
+
+        .alert-const-tag {
             color: #F59E0B;
             font-weight: bold;
-            border-left-color: #F59E0B;
-            background-color: rgba(245, 158, 11, 0.1);
-            margin-bottom: 12px;
         }
 
         .no-alert {
-            color: #22C55E;
             font-size: 22px;
             font-weight: bold;
             text-align: center;
-            margin-top: 130px;
+            margin-top: 140px;
             line-height: 1.8;
             width: 100%;
         }
+        .no-alert-green { color: #22C55E; }
+        .no-alert-gray { color: #64748B; }
 
-        #log-live-communication {
-            color: #38BDF8;
-            font-family: monospace;
-            font-size: 12px;
-            line-height: 1.4;
-            margin: 0;
-            white-space: pre-wrap;
-        }
-
-        #log-raw-json {
-            color: #4ADE80;
-            font-family: monospace;
-            font-size: 11px;
-            line-height: 1.3;
-            margin: 0;
-            white-space: pre;
-        }
-
+        /* 下部流れるテロップ */
         .ticker-container {
             width: 100%;
             height: 75px; 
@@ -250,36 +209,25 @@
 
     <div class="header-container">
         <h1>北海道&nbsp;&nbsp;道路交通情報</h1>
-        <p id="status-text">● 24Hセキュア・ローカル配信管制中</p>
+        <p id="status-text">● 24H広域道路運行管制システム（左右分離独立監視版）</p>
     </div>
 
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title"><span>🚨 管制経路内 運行規制情報情報板</span><span id="live-clock-tag" style="color: #A5F3FC; font-size:13px; font-weight: bold;">（同期中）</span></p>
-            
-            <div class="board-content-wrapper">
-                <div id="fixed-danger-zone"></div>
-                
-                <div class="scroll-outer-box" id="scroll-outer-box">
-                    <div id="scroll-inner-container">
-                        <div class="no-alert" style="color: #64748B;">⚡ 道路交通情報を読み込んでいます...</div>
-                    </div>
+            <p class="board-title left-title"><span>🚨 重大障害・通行止め情報（最優先）</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:13px;">（同期中）</span></p>
+            <div class="board-content-wrapper" id="left-outer-box">
+                <div class="scroll-inner-container" id="left-inner-container">
+                    <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
                 </div>
             </div>
         </div>
 
-        <div class="board-container stream-right">
-            <div class="log-half-box">
-                <p style="color: #38BDF8; font-size: 13px; font-weight: bold; margin: 0 0 6px 0;">📡 ① 内部ファイル同期ログ</p>
-                <pre id="log-live-communication" class="log-scroll-area">初期化中...</pre>
-            </div>
-            <div class="log-half-box">
-                <p style="color: #4ADE80; font-size: 13px; font-weight: bold; margin: 6px 0 6px 0;">💾 ② 読み込んだ生のJARTICデータ（JSON）</p>
-                <div id="log-json-outer-box" class="log-scroll-area" style="overflow: hidden;">
-                    <div id="log-raw-json-container">
-                        <pre id="log-raw-json">（データ待機中...）</pre>
-                    </div>
+        <div class="board-container info-right">
+            <p class="board-title right-title"><span>🚧 路線内 工事・車線規制・維持作業</span><span id="right-clock-tag" style="color: #FDE047; font-size:13px;">（同期中）</span></p>
+            <div class="board-content-wrapper" id="right-outer-box">
+                <div class="scroll-inner-container" id="right-inner-container">
+                    <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
                 </div>
             </div>
         </div>
@@ -294,22 +242,10 @@
     </div>
 
     <script>
-        let scrollTimer = null; 
-        let jsonScrollTimer = null; 
-        const commLogBox = document.getElementById("log-live-communication");
-        const jsonBackupBox = document.getElementById("log-raw-json");
-
-        function writeCommLog(message) {
-            const now = new Date();
-            const timestamp = `[${now.toLocaleTimeString()}] `;
-            commLogBox.innerText += "\n" + timestamp + message;
-            commLogBox.scrollTop = commLogBox.scrollHeight;
-        }
+        let leftScrollTimer = null; 
+        let rightScrollTimer = null; 
 
         function checkHokkaidoTrafficTextOnly() {
-            writeCommLog("=== セキュア同期確認スタート ===");
-            writeCommLog("[1/1] GitHubサーバー内の data.json の読み込みを開始...");
-
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
             fetch(jsonUrl)
@@ -318,14 +254,10 @@
                     return response.json();
                 })
                 .then(jsonData => {
-                    writeCommLog("=== 🟢 新しいジェイソンデータを解析します ===");
-                    jsonBackupBox.innerText = JSON.stringify(jsonData, null, 2);
-                    
                     updateControlBoard(jsonData);
-                    startRightLogJsonScroll();
                 })
                 .catch(error => {
-                    writeCommLog(`❌ エラー発生: ${error.toString()}`);
+                    console.error("データ同期エラー:", error);
                 });
         }
 
@@ -333,7 +265,8 @@
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
-            document.getElementById("live-clock-tag").innerText = `（${timeStr} 管制同期完了）`;
+            document.getElementById("left-clock-tag").innerText = `（${timeStr} 更新）`;
+            document.getElementById("right-clock-tag").innerText = `（${timeStr} 更新）`;
 
             let redAlerts = [];   
             let yellowAlerts = [];
@@ -378,7 +311,6 @@
 
                     if (isHit) {
                         let routeName = "管轄専用道";
-                        
                         if (iText.includes("深川留萌") || iText.includes("深川西") || iText.includes("北竜") || iText.includes("留萌") || iText.includes("幌糠")) routeName = "深川留萌自動車道";
                         else if (iText.includes("帯広広尾") || iText.includes("中札内") || iText.includes("大樹") || iText.includes("幸福") || iText.includes("更別")) routeName = "帯広広尾自動車道";
                         else if (iText.includes("旭川紋別") || iText.includes("白滝") || iText.includes("遠軽") || iText.includes("上川") || iText.includes("愛別")) routeName = "旭川紋別自動車道";
@@ -405,6 +337,7 @@
                 });
             }
 
+            // 特例コードの引き継ぎ
             const rawText = JSON.stringify(jsonData);
             if (rawText.includes("深川西") && rawText.includes("北竜") && !redAlerts.some(a => a.text.includes("深川留萌"))) {
                 redAlerts.push({ text: "深川留萌自動車道：北竜ひまわりＩＣ～深川西ＩＣ間が、事故または災害のため通行止めとなっています。" });
@@ -416,128 +349,91 @@
                 redAlerts.push({ text: "道東自動車道：トマムＩＣ～十勝清水ＩＣ間が、事故のため通行止めとなっています。" });
             }
 
-            let finalRedHTMLs = [];
-            let finalYellowHTMLs = [];
-            let seenTexts = new Set();
-            let seenRouteGeoKeys = new Set();
+            // 重複排除処理
+            let finalRedHTMLs = []; let finalYellowHTMLs = [];
+            let seenTexts = new Set(); let seenRouteGeoKeys = new Set();
 
             redAlerts.forEach(item => {
                 if (seenTexts.has(item.text)) return;
-                let geoTokens = [];
-                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) {
-                    geoTokens.sort();
-                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red";
-                    if (seenRouteGeoKeys.has(geoKey)) return;
-                    seenRouteGeoKeys.add(geoKey);
-                }
-                seenTexts.add(item.text);
-                closedCount++;
-                finalRedHTMLs.push(`<div class="alert-item"><span class="alert-closed">【🚨 通行止め】</span> ${item.text}</div>`);
+                let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
+                if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-red"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
+                seenTexts.add(item.text); closedCount++;
+                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">【🚨 通行止め】</span> ${item.text}</div>`);
             });
 
             yellowAlerts.forEach(item => {
                 if (seenTexts.has(item.text)) return;
-                let geoTokens = [];
-                targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
-                if (geoTokens.length >= 2) {
-                    geoTokens.sort();
-                    let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-yellow";
-                    if (seenRouteGeoKeys.has(geoKey)) return;
-                    seenRouteGeoKeys.add(geoKey);
-                }
-                seenTexts.add(item.text);
-                constCount++;
-                finalYellowHTMLs.push(`<div class="alert-item alert-construction"><span class="alert-construction">【⚠️ 規制・障害情報】</span> ${item.text}</div>`);
+                let geoTokens = []; targetKeywords.forEach(kw => { if (item.text.includes(kw)) geoTokens.push(kw); });
+                if (geoTokens.length >= 2) { geoTokens.sort(); let geoKey = geoTokens[0] + "-" + geoTokens[1] + "-yellow"; if (seenRouteGeoKeys.has(geoKey)) return; seenRouteGeoKeys.add(geoKey); }
+                seenTexts.add(item.text); constCount++;
+                finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【⚠️ 規制・工事】</span> ${item.text}</div>`);
             });
 
-            document.getElementById("fixed-danger-zone").innerHTML = finalRedHTMLs.join("");
-            const innerContainer = document.getElementById("scroll-inner-container");
-            
-            if (finalRedHTMLs.length === 0 && finalYellowHTMLs.length === 0) {
-                innerContainer.innerHTML = `<div class="no-alert">🟢 現在（${timeStr}）、道内全域 of 指定管制経路内に<br>通行止め・重大な規制情報はありません（順調）。</div>`;
-                innerContainer.style.top = "5px";
-                if (scrollTimer) clearInterval(scrollTimer);
+            // 📺 【左側：重大障害】の描画・スクロール制御
+            const leftInner = document.getElementById("left-inner-container");
+            if (finalRedHTMLs.length === 0) {
+                leftInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、道内指定経路内に<br>通行止め等の重大障害はありません。</div>`;
+                leftInner.style.top = "15px";
+                if (leftScrollTimer) clearInterval(leftScrollTimer);
             } else {
-                if (finalYellowHTMLs.length > 0) {
-                    innerContainer.innerHTML = finalYellowHTMLs.join("");
-                    startAutoScrollEngine();
-                } else {
-                    innerContainer.innerHTML = "";
-                    if (scrollTimer) clearInterval(scrollTimer);
-                }
+                leftInner.innerHTML = finalRedHTMLs.join("");
+                startAutoScrollEngine("left");
             }
 
-            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) {
-                tickerParts.push(`⚠️緊急速報：現在、道内高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。各現場情報に従い一般道等への迂回をご検討ください。`);
+            // 📺 【右側：工事規制】の描画・スクロール制御
+            const rightInner = document.getElementById("right-inner-container");
+            if (finalYellowHTMLs.length === 0) {
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、道内指定経路内に<br>工事・車線規制情報はありません。</div>`;
+                rightInner.style.top = "15px";
+                if (rightScrollTimer) clearInterval(rightScrollTimer);
             } else {
-                tickerParts.push(`🟢現在、広域管制経路内に災害や大事故による通行止め情報はありません（通行順調）。`);
+                rightInner.innerHTML = finalYellowHTMLs.join("");
+                startAutoScrollEngine("right");
             }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線において障害・車線規制・維持補修作業が計 ${constCount} 件検出されています。安全に注意して通行してください。`);
+
+            // 下部テロップの更新
+            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】左右分離独立監視システム巡航中`];
+            if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め】が現在 ${closedCount} 件発生しています。`); } 
+            else { tickerParts.push(`🟢現在、広域管制経路内に大事故等による通行止め情報はありません。`); }
+            if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修を作業計 ${constCount} 件検出。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        function startAutoScrollEngine() {
-            if (scrollTimer) clearInterval(scrollTimer);
-            const outerBox = document.getElementById("scroll-outer-box");
-            const innerBox = document.getElementById("scroll-inner-container");
-            innerBox.style.top = "5px"; 
+        // 🚀 左右のスクロールを完全に独立して制御するエンジン
+        function startAutoScrollEngine(side) {
+            if (side === "left" && leftScrollTimer) clearInterval(leftScrollTimer);
+            if (side === "right" && rightScrollTimer) clearInterval(rightScrollTimer);
+
+            const outerBox = document.getElementById(`${side}-outer-box`);
+            const innerBox = document.getElementById(`${side}-inner-container`);
+            innerBox.style.top = "15px"; 
             
             setTimeout(() => {
                 const outerHeight = outerBox.clientHeight;
                 const innerHeight = innerBox.clientHeight;
                 if (innerHeight > outerHeight - 20) {
-                    let currentTop = 5;
-                    const maxScroll = -(innerHeight - outerHeight + 25);
-                    scrollTimer = setInterval(() => {
+                    let currentTop = 15;
+                    const maxScroll = -(innerHeight - outerHeight + 30);
+                    
+                    const timer = setInterval(() => {
                         currentTop -= 1; 
                         innerBox.style.top = currentTop + "px";
                         if (currentTop <= maxScroll) {
-                            clearInterval(scrollTimer);
+                            clearInterval(timer);
                             setTimeout(() => {
-                                innerBox.style.top = "5px";
-                                setTimeout(startAutoScrollEngine, 1000); 
-                            }, 2000);
+                                innerBox.style.top = "15px";
+                                setTimeout(() => startAutoScrollEngine(side), 1000); 
+                            }, 3000); // 下まで流れたら3秒キープして先頭に戻る
                         }
                     }, 40); 
+
+                    if (side === "left") leftScrollTimer = timer;
+                    if (side === "right") rightScrollTimer = timer;
                 }
             }, 2000); 
         }
 
-        // 🎬 🛠️ 右側：ブレーキを解除し、移動量を「2.0」へ大増速した真の高速巡航エンジン
-        function startRightLogJsonScroll() {
-            if (jsonScrollTimer) clearInterval(jsonScrollTimer);
-            
-            const outerBox = document.getElementById("log-json-outer-box");
-            const innerBox = document.getElementById("log-raw-json-container");
-            innerBox.style.top = "12px"; 
-            
-            setTimeout(() => {
-                const outerHeight = outerBox.clientHeight;
-                const innerHeight = innerBox.clientHeight;
-                
-                if (innerHeight > outerHeight - 24) {
-                    let currentTop = 12;
-                    const maxScroll = -(innerHeight - outerHeight + 30);
-                    
-                    jsonScrollTimer = setInterval(() => {
-                        currentTop -= 2.0; // 🛠️ ここを 1.0 から 2.0 に大増速！一気にデータが流れるように変更
-                        innerBox.style.top = currentTop + "px";
-                        
-                        if (currentTop <= maxScroll) {
-                            clearInterval(jsonScrollTimer);
-                            setTimeout(() => {
-                                innerBox.style.top = "12px"; 
-                                setTimeout(startRightLogJsonScroll, 1000); 
-                            }, 3000); 
-                        }
-                    }, 25); // 🛠️ 動く周期も 35ms から 25ms に縮めて、ヌルヌル感をMAXに強化
-                }
-            }, 1500); 
-        }
-
-        writeCommLog("システム初期化完了。赤札絶対固定・右ログ高速巡航版稼働。");
+        setInterval(checkHokkaidoTrafficTextOnly, 60000); // 1分ごとに画面内のデータを再リロード
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
 </body>
