@@ -22,7 +22,7 @@
             flex-direction: column;
         }
 
-        /* 👑 JR貨物テイストを逆輸入した横並びヘッダー */
+        /* 横並び型のデザインヘッダー */
         header {
             display: flex;
             justify-content: space-between;
@@ -38,7 +38,7 @@
             align-items: center; 
         }
         
-        /* JARTIC専用の立体オレンジバッジ */
+        /* JARTIC専用オレンジバッジ */
         .logo-badge {
             background-color: #f97316;
             color: #0f172a;
@@ -58,7 +58,7 @@
             color: #F8FAFC;
         }
 
-        /* 右上の控えめな更新時間エリア */
+        /* 右上の更新時間エリア */
         .header-time-area {
             font-size: 16pt; 
             color: #94a3b8; 
@@ -76,7 +76,7 @@
             display: flex;
             gap: 20px;
             width: 100%;
-            flex-grow: 1; /* 縦幅を画面最大まで自動で伸ばす */
+            flex-grow: 1; 
             margin-bottom: 15px;
             box-sizing: border-box;
             overflow: hidden;
@@ -86,7 +86,7 @@
             flex: 1; 
             display: flex;
             flex-direction: column;
-            background-color: #1e293b; /* JR貨物と同じ高級感のあるグレーに変更 */
+            background-color: #1e293b; 
             border: 1px solid #334155;
             border-radius: 16px;
             padding: 25px;
@@ -130,14 +130,14 @@
             transition: top 0.3s ease-out; 
         }
 
-        /* 各種アラートアイテム */
+        /* 🚨 重大障害：文字サイズを24pxに拡大、左線を12pxに太く変更 */
         .alert-item-red {
-            font-size: 20px; 
+            font-size: 24px; 
             line-height: 1.6;
-            margin-bottom: 14px;
-            padding: 16px 20px;
+            margin-bottom: 16px;
+            padding: 18px 22px;
             border-radius: 8px;
-            border-left: 8px solid #EF4444;
+            border-left: 12px solid #EF4444;
             background-color: rgba(239, 68, 68, 0.15);
             color: #FCA5A5;
         }
@@ -147,13 +147,14 @@
             font-weight: bold;
         }
 
+        /* ⚠️ 工事規制：文字サイズを21pxに拡大、左線を9pxに太く変更 */
         .alert-item-yellow {
-            font-size: 18px;
+            font-size: 21px;
             line-height: 1.6;
-            margin-bottom: 12px;
-            padding: 14px 18px;
+            margin-bottom: 14px;
+            padding: 16px 20px;
             border-radius: 8px;
-            border-left: 6px solid #F59E0B;
+            border-left: 9px solid #F59E0B;
             background-color: rgba(245, 158, 11, 0.1);
             color: #FDE047;
         }
@@ -164,7 +165,7 @@
         }
 
         .no-alert {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
             text-align: center;
             margin-top: 140px;
@@ -174,10 +175,10 @@
         .no-alert-green { color: #22C55E; }
         .no-alert-gray { color: #64748B; }
 
-        /* ニューステロップ */
+        /* 📰 ニューステロップ：赤を廃止し、高さを60px（80%）にスリム化 */
         .ticker-container {
             width: 100%;
-            height: 75px; 
+            height: 60px; 
             background-color: #020617;
             border-top: 4px solid #475569; 
             overflow: hidden;
@@ -187,12 +188,13 @@
             flex-shrink: 0;
         }
 
+        /* タイトル背景を「赤」から落ち着いた「青灰色」に変更 */
         .ticker-title {
-            background-color: #B91C1C; 
+            background-color: #334155; 
             color: #FFFFFF;
-            font-size: 20px; 
+            font-size: 18px; 
             font-weight: bold;
-            padding: 0 35px;
+            padding: 0 30px;
             height: 100%;
             display: flex;
             align-items: center;
@@ -214,7 +216,7 @@
             white-space: nowrap;
             padding-left: 100%; 
             animation: ticker-move 32s linear infinite; 
-            font-size: 24px; 
+            font-size: 22px; 
             color: #F8FAFC;
             font-weight: bold;
             letter-spacing: 0.5px;
@@ -228,6 +230,7 @@
 </head>
 <body>
 
+    <!-- 横並び型のヘッダー -->
     <header>
         <div class="title-area">
             <div class="logo-badge">JARTIC</div>
@@ -239,6 +242,7 @@
         </div>
     </header>
 
+    <!-- メインダッシュボード -->
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
@@ -261,6 +265,7 @@
 
     </div>
 
+    <!-- 下部ニューステロップ -->
     <div class="ticker-container">
         <div class="ticker-title">JARTIC道路ニュース速報</div>
         <div class="ticker-text-wrapper">
@@ -292,7 +297,6 @@
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
-            // 右上のヘッダー時間と、各ボードの同期タグを同時に更新
             document.getElementById("update-time-text").innerText = timeStr;
             document.getElementById("left-clock-tag").innerText = `[データ同期完了]`;
             document.getElementById("right-clock-tag").innerText = `[データ同期完了]`;
