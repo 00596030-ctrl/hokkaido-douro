@@ -130,16 +130,15 @@
             transition: top 0.3s ease-out; 
         }
 
-        /* 🚨 重大障害：ほぼ黒に近い超深紅の背景と、目に優しい落ち着いた桜レンガ色の文字 */
+        /* 重大障害：背景は超暗い赤、文字色は白に統一 */
         .alert-item-red {
             font-size: 24px; 
             line-height: 1.6;
             margin-bottom: 16px;
             padding: 18px 22px;
             border-radius: 8px;
-            border-left: 8px solid #B91C1C;
             background-color: #191010; 
-            color: #E2B3B3;
+            color: #F8FAFC;
             border: 1px solid #3A1E1E;
             border-left: 8px solid #EF4444;
         }
@@ -149,7 +148,7 @@
             font-weight: bold;
         }
 
-        /* ⚠️ 工事規制：ほぼ黒に近い超深黄の背景と、目に優しい落ち着いた落ち葉色の文字 */
+        /* 工事規制：背景は超暗い黄、文字色は白に統一 */
         .alert-item-yellow {
             font-size: 21px;
             line-height: 1.6;
@@ -157,7 +156,7 @@
             padding: 16px 20px;
             border-radius: 8px;
             background-color: #1A1710; 
-            color: #E2D5B3;
+            color: #F8FAFC;
             border: 1px solid #3A321E;
             border-left: 6px solid #F59E0B;
         }
@@ -240,7 +239,7 @@
         </div>
         <div class="header-time-area">
             <div>情報更新: <span id="update-time-text">-時-分現在</span></div>
-            <div class="header-sub-text">● 24H広域道路運行管制システム</div>
+            <div class="header-sub-text">24H広域道路運行管制システム</div>
         </div>
     </header>
 
@@ -248,19 +247,19 @@
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title left-title"><span>🚨 重大障害・通行止め・事故情報</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:14px; font-weight:normal;">（同期中）</span></p>
+            <p class="board-title left-title"><span>重大障害・通行止め・事故情報</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:14px; font-weight:normal;">（同期中）</span></p>
             <div class="board-content-wrapper" id="left-outer-box">
                 <div class="scroll-inner-container" id="left-inner-container">
-                    <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
+                    <div class="no-alert no-alert-gray">管制データを読み込んでいます...</div>
                 </div>
             </div>
         </div>
 
         <div class="board-container info-right">
-            <p class="board-title right-title"><span>🚧 路線内 工事・車線規制・維持作業</span><span id="right-clock-tag" style="color: #FDE047; font-size:14px; font-weight:normal;">（同期中）</span></p>
+            <p class="board-title right-title"><span>路線内 工事・車線規制・維持作業</span><span id="right-clock-tag" style="color: #FDE047; font-size:14px; font-weight:normal;">（同期中）</span></p>
             <div class="board-content-wrapper" id="right-outer-box">
                 <div class="scroll-inner-container" id="right-inner-container">
-                    <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
+                    <div class="no-alert no-alert-gray">管制データを読み込んでいます...</div>
                 </div>
             </div>
         </div>
@@ -381,9 +380,9 @@
                         }
 
                         if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
-                            let typeTag = "【🚨 通行止め】";
-                            if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
-                            else if (rdText.includes("障害")) typeTag = "【📦 路上障害】";
+                            let typeTag = "【通行止め】";
+                            if (rdText.includes("事故")) typeTag = "【事故発生】";
+                            else if (rdText.includes("障害")) typeTag = "【路上障害】";
                             
                             redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
@@ -405,24 +404,24 @@
             yellowAlerts.forEach(item => {
                 if (seenTexts.has(item.text)) return;
                 seenTexts.add(item.text); constCount++;
-                finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【⚠️ 規制・工事】</span> ${item.text}</div>`);
+                finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【規制・工事】</span> ${item.text}</div>`);
             });
 
             const leftInner = document.getElementById("left-inner-container");
             if (finalRedHTMLs.length === 0) {
-                leftInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、広域管制経路内に<br>通行止めや事故等の重大障害はありません。</div>`;
+                leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、広域管制経路内に通行止めや事故等の重大障害はありません。</div>`;
                 leftInner.style.top = "15px"; if (leftScrollTimer) clearInterval(leftScrollTimer);
             } else { leftInner.innerHTML = finalRedHTMLs.join(""); startAutoScrollEngine("left"); }
 
             const rightInner = document.getElementById("right-inner-container");
             if (finalYellowHTMLs.length === 0) {
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、広域管制経路内に<br>工事・車線規制情報はありません。</div>`;
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、広域管制経路内に工事・車線規制情報はありません。</div>`;
                 rightInner.style.top = "15px"; if (rightScrollTimer) clearInterval(rightScrollTimer);
             } else { rightInner.innerHTML = finalYellowHTMLs.join(""); startAutoScrollEngine("right"); }
 
-            let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
-            else { tickerParts.push("🟢現在、広域管制経路内に通行止めや大事故情報はありません。"); }
+            let tickerParts = [`情報同期：${timeStr}更新`, `運行管制：指定特定経路リアルタイム巡航中`];
+            if (closedCount > 0) { tickerParts.push(`緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
+            else { tickerParts.push("現在、広域管制経路内に通行止めや大事故情報はありません。"); }
             if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修を作業計 ${constCount} 件検出。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
