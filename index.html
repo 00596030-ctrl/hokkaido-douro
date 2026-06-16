@@ -4,78 +4,109 @@
     <meta charset="UTF-8">
     <title>JARTIC&nbsp;&nbsp;道路交通情報センター</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             background-color: #0F172A;
             color: #F8FAFC;
-            font-family: "Helvetica Neue", "Segoe UI", "Meiryo", sans-serif;
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            box-sizing: border-box;
             overflow: hidden; 
         }
 
         body {
-            padding: 12px 12px 0 12px; 
+            padding: 25px 25px 0 25px; 
             display: flex;
             flex-direction: column;
         }
 
-        .header-container {
-            text-align: center;
-            height: 55px;
-            border-bottom: 2px solid #334155;
-            margin-bottom: 10px; 
+        /* 👑 JR貨物テイストを逆輸入した横並びヘッダー */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid #334155;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
             flex-shrink: 0;
         }
 
-        .header-container h1 {
-            margin: 0;
-            font-size: 28px;
-            color: #38BDF8;
+        .title-area { 
+            display: flex; 
+            align-items: center; 
+        }
+        
+        /* JARTIC専用の立体オレンジバッジ */
+        .logo-badge {
+            background-color: #f97316;
+            color: #0f172a;
+            padding: 10px 24px;
+            font-weight: 900;
+            font-size: 32pt;
+            border-radius: 8px;
+            margin-right: 25px;
             letter-spacing: 2px;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+        
+        h1 { 
+            font-size: 32pt; 
+            letter-spacing: 1px; 
+            font-weight: bold; 
+            color: #F8FAFC;
         }
 
-        #status-text {
-            font-size: 13px;
-            color: #94A3B8;
-            margin: 2px 0 0 0;
+        /* 右上の控えめな更新時間エリア */
+        .header-time-area {
+            font-size: 16pt; 
+            color: #94a3b8; 
+            text-align: right;
+        }
+        .header-sub-text {
+            font-size: 11pt; 
+            margin-top: 4px; 
+            color: #475569;
             font-weight: bold;
         }
 
+        /* メインレイアウト */
         .main-dashboard-layout {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             width: 100%;
-            height: calc(100vh - 165px); 
+            flex-grow: 1; /* 縦幅を画面最大まで自動で伸ばす */
+            margin-bottom: 15px;
             box-sizing: border-box;
-            flex-shrink: 0;
+            overflow: hidden;
         }
 
         .board-container {
             flex: 1; 
             display: flex;
             flex-direction: column;
-            background-color: #020617;
-            border: 2px solid #334155;
+            background-color: #1e293b; /* JR貨物と同じ高級感のあるグレーに変更 */
+            border: 1px solid #334155;
             border-radius: 16px;
-            padding: 18px;
+            padding: 25px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             box-sizing: border-box;
             overflow: hidden;
         }
 
-        .info-left { border-color: #EF4444; }
-        .info-right { border-color: #F59E0B; }
+        .info-left { border-top: 6px solid #EF4444; }
+        .info-right { border-top: 6px solid #F59E0B; }
 
         .board-title {
-            font-size: 18px;
-            margin: 0 0 12px 0;
+            font-size: 22px;
+            margin: 0 0 15px 0;
             font-weight: bold;
-            border-bottom: 2px solid #1E293B;
-            padding-bottom: 8px;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 10px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             flex-shrink: 0;
         }
 
@@ -99,6 +130,7 @@
             transition: top 0.3s ease-out; 
         }
 
+        /* 各種アラートアイテム */
         .alert-item-red {
             font-size: 20px; 
             line-height: 1.6;
@@ -142,12 +174,12 @@
         .no-alert-green { color: #22C55E; }
         .no-alert-gray { color: #64748B; }
 
+        /* ニューステロップ */
         .ticker-container {
             width: 100%;
             height: 75px; 
             background-color: #020617;
             border-top: 4px solid #475569; 
-            margin-top: 10px; 
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -196,15 +228,21 @@
 </head>
 <body>
 
-    <div class="header-container">
-        <h1>JARTIC&nbsp;&nbsp;道路交通情報センター</h1>
-        <p id="status-text">● 24H広域道路運行管制システム（10分毎に最新情報取得）</p>
-    </div>
+    <header>
+        <div class="title-area">
+            <div class="logo-badge">JARTIC</div>
+            <h1>道路交通情報（北海道）</h1>
+        </div>
+        <div class="header-time-area">
+            <div>情報更新: <span id="update-time-text">-時-分現在</span></div>
+            <div class="header-sub-text">● 24H広域道路運行管制システム</div>
+        </div>
+    </header>
 
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
-            <p class="board-title left-title"><span>🚨 重大障害・通行止め・事故情報</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:13px;">（同期中）</span></p>
+            <p class="board-title left-title"><span>🚨 重大障害・通行止め・事故情報</span><span id="left-clock-tag" style="color: #FCA5A5; font-size:14px; font-weight:normal;">（同期中）</span></p>
             <div class="board-content-wrapper" id="left-outer-box">
                 <div class="scroll-inner-container" id="left-inner-container">
                     <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
@@ -213,7 +251,7 @@
         </div>
 
         <div class="board-container info-right">
-            <p class="board-title right-title"><span>🚧 路線内 工事・車線規制・維持作業</span><span id="right-clock-tag" style="color: #FDE047; font-size:13px;">（同期中）</span></p>
+            <p class="board-title right-title"><span>🚧 路線内 工事・車線規制・維持作業</span><span id="right-clock-tag" style="color: #FDE047; font-size:14px; font-weight:normal;">（同期中）</span></p>
             <div class="board-content-wrapper" id="right-outer-box">
                 <div class="scroll-inner-container" id="right-inner-container">
                     <div class="no-alert no-alert-gray">⚡ 管制データを読み込んでいます...</div>
@@ -254,15 +292,16 @@
             const now = new Date();
             const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
             
-            document.getElementById("left-clock-tag").innerText = `（${timeStr} 更新）`;
-            document.getElementById("right-clock-tag").innerText = `（${timeStr} 更新）`;
+            // 右上のヘッダー時間と、各ボードの同期タグを同時に更新
+            document.getElementById("update-time-text").innerText = timeStr;
+            document.getElementById("left-clock-tag").innerText = `[データ同期完了]`;
+            document.getElementById("right-clock-tag").innerText = `[データ同期完了]`;
 
             let redAlerts = [];   
             let yellowAlerts = [];
             let closedCount = 0; 
             let constCount = 0;  
 
-            // 📊 運行管制網（指定特定経路を152拠点完璧に網羅する地引き網リスト）
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
@@ -286,30 +325,26 @@
                     const props = feature.properties;
                     if (!props) return;
 
-                    let rdText = (props.rd || "").toString().trim(); // 純粋な現在の障害内容
-                    let cText = (props.c || "").toString().trim();   // 純粋な現在の工事内容
-                    let iText = (props.i || "").toString().trim();   // 発生区間名
-                    let nText = (props.n || "").toString().trim();   // 拠点名称
+                    let rdText = (props.rd || "").toString().trim();
+                    let cText = (props.c || "").toString().trim();   
+                    let iText = (props.i || "").toString().trim();   
+                    let nText = (props.n || "").toString().trim();   
 
-                    // 🛡️ 【絶対防壁①：消去漏れゾンビデータをピンポイント個別ID撃破】
-                    // 元データ上で日高門別、千歳恵庭（事故）、豊浦（路上障害）の文字の残骸は
-                    // 1文字も見ずに、この瞬間に完全強制破棄（存在を抹殺）する！
                     if (iText.includes("日高門別") && iText.includes("日高厚賀")) return;
                     if (iText.includes("千歳恵庭") && (cText.includes("事故") || rdText.includes("事故"))) return;
                     if (iText.includes("豊浦") && (cText.includes("障害") || rdText.includes("障害"))) return;
 
-                    // 🌟 1. 文字情報が書き込まれている有効なデータであるか判定
+                    let routeName = "管轄専用道";
+                    let fullTextForRoute = iText + nText + rdText + cText;
+
                     let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
                                   cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
                                   cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || 
                                   rdText.includes("障害") || cText.includes("障害") || fullTextForRoute.includes("樽前");
 
-                    // 🌟 2. 監視キーワードに部分一致しているかチェック（網から漏らさない）
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
                     if (isHit || iText.includes("樽前") || nText.includes("樽前")) {
-                        let routeName = "管轄専用道";
-                        let fullTextForRoute = iText + nText + rdText + cText;
                         
                         if (fullTextForRoute.includes("札樽") || fullTextForRoute.includes("小樽")) routeName = "札樽自動車道";
                         else if (fullTextForRoute.includes("道東") || fullTextForRoute.includes("占冠") || fullTextForRoute.includes("トマム") || fullTextForRoute.includes("清水") || fullTextForRoute.includes("訓子府")) routeName = "道東自動車道";
@@ -331,7 +366,6 @@
                             displayLocation = displayLocation.slice(0, -2);
                         }
 
-                        // JARTICの構造上、cTextとrdTextの綺麗な組み合わせを生成
                         let actualStatusText = cText || rdText || "運行規制中";
                         let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
                         detailText = detailText.replace("規制なし：", "");
@@ -340,7 +374,6 @@
                             return; 
                         }
 
-                        // 💥 分類判定
                         if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
                             let typeTag = "【🚨 通行止め】";
                             if (rdText.includes("事故")) typeTag = "【💥 事故発生】";
@@ -354,7 +387,6 @@
                 });
             }
 
-            // HTML組み立て
             let finalRedHTMLs = []; let finalYellowHTMLs = [];
             let seenTexts = new Set();
 
@@ -370,21 +402,18 @@
                 finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【⚠️ 規制・工事】</span> ${item.text}</div>`);
             });
 
-            // 左側（重大障害）描画
             const leftInner = document.getElementById("left-inner-container");
             if (finalRedHTMLs.length === 0) {
                 leftInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、広域管制経路内に<br>通行止めや事故等の重大障害はありません。</div>`;
                 leftInner.style.top = "15px"; if (leftScrollTimer) clearInterval(leftScrollTimer);
             } else { leftInner.innerHTML = finalRedHTMLs.join(""); startAutoScrollEngine("left"); }
 
-            // 右側（工事規制）描画
             const rightInner = document.getElementById("right-inner-container");
             if (finalYellowHTMLs.length === 0) {
                 rightInner.innerHTML = `<div class="no-alert no-alert-green">🟢 現在、広域管制経路内に<br>工事・車線規制情報はありません。</div>`;
                 rightInner.style.top = "15px"; if (rightScrollTimer) clearInterval(rightScrollTimer);
             } else { rightInner.innerHTML = finalYellowHTMLs.join(""); startAutoScrollEngine("right"); }
 
-            // テロップ更新
             let tickerParts = [`【情報同期】${timeStr}更新`, `【運行管制】指定特定経路リアルタイム巡航中`];
             if (closedCount > 0) { tickerParts.push(`⚠️緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
             else { tickerParts.push("🟢現在、広域管制経路内に通行止めや大事故情報はありません。"); }
