@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>JARTIC&nbsp;&nbsp;道路交通情報センター</title>
+    <title>道路交通情報センター</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
@@ -38,7 +38,7 @@
             align-items: center; 
         }
         
-        /* JARTIC専用オレンジバッジ */
+        /* 専用オレンジバッジ（文字は空欄、または道路に変更可能。今回は枠のみ残すか非表示にできますが、JR貨物風に「道路」と入れました） */
         .logo-badge {
             background-color: #f97316;
             color: #0f172a;
@@ -231,10 +231,9 @@
 </head>
 <body>
 
-    <!-- 横並び型のヘッダー -->
     <header>
         <div class="title-area">
-            <div class="logo-badge">JARTIC</div>
+            <div class="logo-badge">道路</div>
             <h1>道路交通情報（北海道）</h1>
         </div>
         <div class="header-time-area">
@@ -243,7 +242,6 @@
         </div>
     </header>
 
-    <!-- メインダッシュボード -->
     <div class="main-dashboard-layout">
         
         <div class="board-container info-left">
@@ -266,9 +264,8 @@
 
     </div>
 
-    <!-- 下部ニューステロップ -->
     <div class="ticker-container">
-        <div class="ticker-title">JARTIC道路ニュース速報</div>
+        <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
             <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。</div>
         </div>
