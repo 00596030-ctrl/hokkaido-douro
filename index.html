@@ -58,7 +58,7 @@
             color: #F8FAFC;
         }
 
-        /* 右上の更新時間エリア */
+        /* 右上の更新时间エリア */
         .header-time-area {
             font-size: 16pt; 
             color: #94a3b8; 
@@ -304,14 +304,13 @@
             let closedCount = 0; 
             let constCount = 0;  
 
-            // 📊 網走・北見方面（女満別、美幌、高野、端野）のキーワードを追加しました
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
-                "七飯藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
+                "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
-                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "追分", "由仁", "むかわ", "十勝平原", "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "キウス", "釧路", "大楽毛",
+                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "安排", "由仁", "むかわ", "十勝平原", "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "キウス", "釧路", "大楽毛",
                 "深川西", "秩父別", "沼田", "北竜", "留萌", "幌糠",
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽",
                 "沼ノ端", "厚真", "鵡川", "汐見", "富川", "日高", "門別", "厚賀",
@@ -339,11 +338,6 @@
 
                     let routeName = "管轄専用道";
                     let fullTextForRoute = iText + nText + rdText + cText;
-
-                    let isAlert = rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("規制") || 
-                                  cText.includes("工事") || cText.includes("規制") || cText.includes("作業") || 
-                                  cText.includes("車線") || cText.includes("補修") || cText.includes("路肩") || 
-                                  rdText.includes("障害") || cText.includes("障害") || fullTextForRoute.includes("樽前");
 
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
@@ -377,10 +371,11 @@
                             return; 
                         }
 
-                        if (rdText.includes("通行止") || rdText.includes("事故") || rdText.includes("障害")) {
+                        // 【変更点】複合テキスト(fullTextForRoute)全体から「通行止」を検知するように修正
+                        if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害")) {
                             let typeTag = "【通行止め】";
-                            if (rdText.includes("事故")) typeTag = "【事故発生】";
-                            else if (rdText.includes("障害")) typeTag = "【路上障害】";
+                            if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
+                            else if (fullTextForRoute.includes("障害")) typeTag = "【路上障害】";
                             
                             redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
@@ -436,13 +431,15 @@
                 const outerHeight = outerBox.clientHeight; const innerHeight = innerBox.clientHeight;
                 if (innerHeight > outerHeight - 20) {
                     let currentTop = 15; const maxScroll = -(innerHeight - outerHeight + 30);
+                    // 【変更点】インターバルを40msから25msに縮めてスピードアップ
                     const timer = setInterval(() => {
                         currentTop -= 1; innerBox.style.top = currentTop + "px";
                         if (currentTop <= maxScroll) {
                             clearInterval(timer);
-                            setTimeout(() => { innerBox.style.top = "15px"; setTimeout(() => startAutoScrollEngine(side), 1000); }, 3000); 
+                            // 下部で停止する時間は1.5秒(1500ms)に短縮
+                            setTimeout(() => { innerBox.style.top = "15px"; setTimeout(() => startAutoScrollEngine(side), 1000); }, 1500); 
                         }
-                    }, 40); 
+                    }, 25); 
                     if (side === "left") leftScrollTimer = timer; if (side === "right") rightScrollTimer = timer;
                 }
             }, 2000); 
