@@ -38,7 +38,7 @@
             align-items: center; 
         }
         
-        /* 専用オレンジバッジ：「道内」に変更 */
+        /* 専用オレンジバッジ */
         .logo-badge {
             background-color: #f97316;
             color: #0f172a;
@@ -304,6 +304,7 @@
             let closedCount = 0; 
             let constCount = 0;  
 
+            // 📊 網走・北見方面（女満別、美幌、高野、端野）のキーワードを追加しました
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
@@ -317,7 +318,7 @@
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
                 "別保", "尾幌", "糸魚沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                "陸別", "置戸", "訓子府", "北見",
+                "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
                 "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
                 "ＢＳ", "BS", "バスストップ", "停留所", "栗沢", "樽前"
             ];
@@ -356,7 +357,7 @@
                         else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
                         else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
                         else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
-                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見")) routeName = "十勝オホーツク自動車道";
+                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野")) routeName = "美幌バイパス・美幌網走道";
                         else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
                         
                         if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
