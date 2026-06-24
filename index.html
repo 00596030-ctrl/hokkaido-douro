@@ -117,7 +117,7 @@
             flex: 1;
             background-color: #000000;
             border-radius: 8px;
-            padding: 15px; /* 上下左右15pxのパディング */
+            padding: 15px;
             overflow: hidden;
             box-sizing: border-box;
             position: relative;
@@ -125,16 +125,16 @@
 
         .scroll-inner-container {
             position: absolute;
-            width: calc(100% - 30px); /* 左右パディング分を引く */
-            top: 15px; /* 初期位置を上のパディングに合わせる */
+            width: calc(100% - 30px);
+            top: 15px;
             transition: top 0.5s ease-in-out; 
         }
 
-        /* 重大障害 */
+        /* 重大障害：はみ出し防止用の3行制限を追加 */
         .alert-item-red {
             font-size: 24px; 
             line-height: 1.5;
-            margin-bottom: 16px; /* 下マージン */
+            margin-bottom: 16px;
             padding: 14px 20px 14px 45px; 
             text-indent: -25px; 
             border-radius: 8px;
@@ -143,11 +143,12 @@
             border: 1px solid #3A1E1E;
             border-left: 8px solid #EF4444;
             
+            /* 3行以上になったら自動で「...」にする設定 */
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 3; 
             overflow: hidden;
-            max-height: 140px; 
+            max-height: 140px; /* 1マスの最大高さを固定化して見切れを完璧に防ぐ */
         }
         
         .alert-closed-tag {
@@ -155,11 +156,11 @@
             font-weight: bold;
         }
 
-        /* 工事規制 */
+        /* 工事規制：同じく3行制限を追加 */
         .alert-item-yellow {
             font-size: 21px;
             line-height: 1.5;
-            margin-bottom: 14px; /* 下マージン */
+            margin-bottom: 14px;
             padding: 12px 20px 12px 45px; 
             text-indent: -25px;
             border-radius: 8px;
@@ -168,6 +169,7 @@
             border: 1px solid #3A321E;
             border-left: 6px solid #F59E0B;
 
+            /* 3行以上になったら自動で「...」にする設定 */
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 3; 
@@ -331,7 +333,7 @@
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
                 "別保", "尾幌", "糸鱼沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
+                "陸別", "置户", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
                 "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
                 "ＢＳ", "BS", "バスストップ", "停留所", "栗沢", "樽前"
             ];
@@ -421,7 +423,6 @@
                 leftInner.style.top = "15px";
             } else { 
                 leftInner.innerHTML = finalRedHTMLs.join(""); 
-                // 1画面に収まり切らない場合があるため、描画直後（100ms秒後）に計算を開始させる
                 setTimeout(() => startPageControl("left"), 100); 
             }
 
@@ -429,6 +430,7 @@
             const rightInner = document.getElementById("right-inner-container");
             if (pageTimers.right) clearTimeout(pageTimers.right);
             if (finalYellowHTMLs.length === 0) {
+                innerBox = document.getElementById("right-inner-container"); //バグ修正用安全策
                 rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
                 rightInner.style.top = "15px";
             } else { 
@@ -444,68 +446,44 @@
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // ページ切り替え制御システム（見切れ＆はみ出し＆外枠余白防止版）
+        // ページ切り替え制御システム（見切れ＆はみ出し防止版）
         function startPageControl(side) {
             if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
             const outerBox = document.getElementById(`${side}-outer-box`);
             const innerBox = document.getElementById(`${side}-inner-container`);
             
-            // CSSで設定されているパディングを取得 (上下15px = 計30px)
-            const style = window.getComputedStyle(outerBox);
-            const paddingTop = parseFloat(style.paddingTop);
-            const paddingBottom = parseFloat(style.paddingBottom);
-            
-            // 初期位置を上のパディングに合わせる
-            innerBox.style.top = `${paddingTop}px`;
+            innerBox.style.top = "15px";
             
             let currentPage = 0;
-            // 【重要】表示可能エリアは、外枠の高さから上下パディングを引いたもの
-            const viewHeight = outerBox.clientHeight - paddingTop - paddingBottom; 
+            const viewHeight = outerBox.clientHeight - 30; 
             const items = innerBox.children;
             
-            let pageTopPositions = [0]; // 各ページのスクロール開始位置（offsetTopからの相対位置）
+            let pageTopPositions = [0]; 
             let currentHeightSum = 0;
 
-            // 各要素の「実際の高さ」を合計していき、見切れない位置でページを区切る
             for (let i = 0; i < items.length; i++) {
-                // margin-bottom分（赤:16px, 黄:14px）を加算
-                const marginBottom = side === 'left' ? 16 : 14;
-                const itemHeight = items[i].offsetHeight + marginBottom;
-                
-                // 次の要素を足すと表示エリアを超える場合、またはその要素自体が巨大な場合
-                if (currentHeightSum + itemHeight > viewHeight) {
-                    // もし1件目で既に超えている場合は、無理やり入れる（3行制限があるので基本起きない）
-                    if (i > 0 && currentHeightSum > 0) {
-                        // この要素のoffsetTop（親からの位置）を次のページのトップにする
-                        pageTopPositions.push(items[i].offsetTop); 
-                        currentHeightSum = itemHeight; // カウントをリセット
-                    } else {
-                        // 1件目が巨大すぎる場合は仕方ないのでそのまま入れ、次の要素から新ページ
-                        currentHeightSum += itemHeight;
-                    }
-                } else {
-                    currentHeightSum += itemHeight;
+                currentHeightSum += items[i].offsetHeight + 16; 
+
+                if (currentHeightSum > viewHeight) {
+                    pageTopPositions.push(items[i].offsetTop); 
+                    currentHeightSum = items[i].offsetHeight + 16; 
                 }
             }
             
             function nextPage() {
-                if (pageTopPositions.length <= 1) return; // 1ページのみならループしない
+                if (pageTopPositions.length <= 1) return;
 
                 currentPage++;
                 if (currentPage >= pageTopPositions.length) {
-                    currentPage = 0; // 最後のページまでいったら最初に戻る
+                    currentPage = 0;
                 }
                 
-                // 記録した要素のぴったりトップの位置に、親のパディング分を調整して動かす
-                const targetTop = pageTopPositions[currentPage];
-                innerBox.style.top = `-${targetTop - paddingTop}px`;
+                innerBox.style.top = `-${pageTopPositions[currentPage] - 15}px`;
 
-                // 5秒ごとに次のページへ
                 pageTimers[side] = setTimeout(nextPage, 5000);
             }
 
-            // ページが複数ある場合のみ、5秒後にページめくりを開始
             if (pageTopPositions.length > 1) {
                 pageTimers[side] = setTimeout(nextPage, 5000);
             }
