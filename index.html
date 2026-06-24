@@ -58,7 +58,7 @@
             color: #F8FAFC;
         }
 
-        /* 右上の更新时间エリア */
+        /* 右上の更新時間エリア */
         .header-time-area {
             font-size: 16pt; 
             color: #94a3b8; 
@@ -127,15 +127,17 @@
             position: absolute;
             width: calc(100% - 30px);
             top: 15px;
-            transition: top 0.3s ease-out; 
+            /* スムーズなページ切り替えをしたい場合は以下を有効に（今回は負荷軽減のため即時切り替えにしています） */
+            /* transition: top 0.5s ease-in-out; */
         }
 
-        /* 重大障害：背景は超暗い赤、文字色は白に統一 */
+        /* 重大障害 */
         .alert-item-red {
             font-size: 24px; 
             line-height: 1.6;
             margin-bottom: 16px;
-            padding: 18px 22px;
+            padding: 18px 22px 18px 45px; /* 左側に余白を作って文字を揃えやすく */
+            text-indent: -25px; /* 行頭のタグだけ少し飛び出させる */
             border-radius: 8px;
             background-color: #191010; 
             color: #F8FAFC;
@@ -148,12 +150,13 @@
             font-weight: bold;
         }
 
-        /* 工事規制：背景は超暗い黄、文字色は白に統一 */
+        /* 工事規制 */
         .alert-item-yellow {
             font-size: 21px;
             line-height: 1.6;
             margin-bottom: 14px;
-            padding: 16px 20px;
+            padding: 16px 20px 16px 45px; /* 左側に余白 */
+            text-indent: -25px;
             border-radius: 8px;
             background-color: #1A1710; 
             color: #F8FAFC;
@@ -267,13 +270,13 @@
     <div class="ticker-container">
         <div class="ticker-title">道路ニュース速報</div>
         <div class="ticker-text-wrapper">
-            <div id="live-ticker-text" class="ticker-text">北海道地方道路交通情報を24時間リアルタイム巡航中。</div>
+            <div id="live-ticker-text" class="ticker-text"></div>
         </div>
     </div>
 
     <script>
-        let leftScrollTimer = null; 
-        let rightScrollTimer = null; 
+        // グローバルタイマー管理用オブジェクト
+        let pageTimers = { left: null, right: null };
 
         function checkHokkaidoTrafficTextOnly() {
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
@@ -316,7 +319,7 @@
                 "沼ノ端", "厚真", "鵡川", "汐見", "富川", "日高", "門別", "厚賀",
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
-                "別保", "尾幌", "糸魚沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
+                "別保", "尾幌", "糸鱼沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
                 "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
                 "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
                 "ＢＳ", "BS", "バスストップ", "停留所", "栗沢", "樽前"
@@ -371,7 +374,6 @@
                             return; 
                         }
 
-                        // 【変更点】複合テキスト(fullTextForRoute)全体から「通行止」を検知するように修正
                         if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害")) {
                             let typeTag = "【通行止め】";
                             if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
@@ -400,51 +402,78 @@
                 finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【規制・工事】</span> ${item.text}</div>`);
             });
 
+            // 左側（重大障害）描画処理
             const leftInner = document.getElementById("left-inner-container");
             if (finalRedHTMLs.length === 0) {
-                leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、広域管制経路内に通行止めや事故等の重大障害はありません。</div>`;
-                leftInner.style.top = "15px"; if (leftScrollTimer) clearInterval(leftScrollTimer);
-            } else { leftInner.innerHTML = finalRedHTMLs.join(""); startAutoScrollEngine("left"); }
+                leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
+                leftInner.style.top = "15px";
+                if (pageTimers.left) clearTimeout(pageTimers.left);
+            } else { 
+                leftInner.innerHTML = finalRedHTMLs.join(""); 
+                startPageControl("left"); 
+            }
 
+            // 右側（工事規制）描画処理
             const rightInner = document.getElementById("right-inner-container");
             if (finalYellowHTMLs.length === 0) {
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、広域管制経路内に工事・車線規制情報はありません。</div>`;
-                rightInner.style.top = "15px"; if (rightScrollTimer) clearInterval(rightScrollTimer);
-            } else { rightInner.innerHTML = finalYellowHTMLs.join(""); startAutoScrollEngine("right"); }
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
+                rightInner.style.top = "15px";
+                if (pageTimers.right) clearTimeout(pageTimers.right);
+            } else { 
+                rightInner.innerHTML = finalYellowHTMLs.join(""); 
+                startPageControl("right"); 
+            }
 
+            // テロップ更新
             let tickerParts = [`情報同期：${timeStr}更新`, `運行管制：指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) { tickerParts.push(`緊急速報：高速道路網で【通行止め・事故障害】が現在 ${closedCount} 件発生しています。`); } 
-            else { tickerParts.push("現在、広域管制経路内に通行止めや大事故情報はありません。"); }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修を作業計 ${constCount} 件検出。`);
+            if (closedCount > 0) { tickerParts.push(`緊急速報：管轄路線内で【通行止め・事故】が現在 ${closedCount} 件発生しています。`); } 
+            else { tickerParts.push("現在、管轄路線内に通行止めや重大事故情報はありません。"); }
+            if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修作業を計 ${constCount} 件検出。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        function startAutoScrollEngine(side) {
-            if (side === "left" && leftScrollTimer) clearInterval(leftScrollTimer);
-            if (side === "right" && rightScrollTimer) clearInterval(rightScrollTimer);
+        // 新しいページ切り替え（ページネーション）制御システム
+        function startPageControl(side) {
+            if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
             const outerBox = document.getElementById(`${side}-outer-box`);
             const innerBox = document.getElementById(`${side}-inner-container`);
-            innerBox.style.top = "15px"; 
             
-            setTimeout(() => {
-                const outerHeight = outerBox.clientHeight; const innerHeight = innerBox.clientHeight;
-                if (innerHeight > outerHeight - 20) {
-                    let currentTop = 15; const maxScroll = -(innerHeight - outerHeight + 30);
-                    // 【変更点】インターバルを40msから25msに縮めてスピードアップ
-                    const timer = setInterval(() => {
-                        currentTop -= 1; innerBox.style.top = currentTop + "px";
-                        if (currentTop <= maxScroll) {
-                            clearInterval(timer);
-                            // 下部で停止する時間は1.5秒(1500ms)に短縮
-                            setTimeout(() => { innerBox.style.top = "15px"; setTimeout(() => startAutoScrollEngine(side), 1000); }, 1500); 
-                        }
-                    }, 25); 
-                    if (side === "left") leftScrollTimer = timer; if (side === "right") rightScrollTimer = timer;
+            // 初期状態に戻す
+            innerBox.style.top = "15px";
+            
+            let currentPage = 0;
+            const viewHeight = outerBox.clientHeight - 30; // 上下パディング等を考慮した表示可能域
+            
+            function nextPage() {
+                const totalHeight = innerBox.clientHeight;
+                
+                // 全件が1画面に収まっている場合はページめくりしない
+                if (totalHeight <= viewHeight) return;
+
+                // 最大何ページあるか計算
+                const maxPage = Math.ceil(totalHeight / viewHeight);
+                
+                currentPage++;
+                
+                if (currentPage >= maxPage) {
+                    // 最後のページまでいったら最初のページ（トップ）に戻る
+                    currentPage = 0;
+                    innerBox.style.top = "15px";
+                } else {
+                    // 次のページ分（viewHeight分）上にずらす
+                    innerBox.style.top = `-${(currentPage * viewHeight) - 15}px`;
                 }
-            }, 2000); 
+
+                // 5秒（5000ms）ごとに次のページへ
+                pageTimers[side] = setTimeout(nextPage, 5000);
+            }
+
+            // 最初に動き出すまで5秒待つ
+            pageTimers[side] = setTimeout(nextPage, 5000);
         }
 
+        // 1分ごとにデータを再読み込み
         setInterval(checkHokkaidoTrafficTextOnly, 60000); 
         setTimeout(checkHokkaidoTrafficTextOnly, 100);
     </script>
