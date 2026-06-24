@@ -58,7 +58,7 @@
             color: #F8FAFC;
         }
 
-        /* 右上の更新時間エリア */
+        /* 右上の更新时间エリア */
         .header-time-area {
             font-size: 16pt; 
             color: #94a3b8; 
@@ -127,8 +127,8 @@
             position: absolute;
             width: calc(100% - 30px);
             top: 15px;
-            /* スムーズなページ切り替えをしたい場合は以下を有効に（今回は負荷軽減のため即時切り替えにしています） */
-            /* transition: top 0.5s ease-in-out; */
+            /* ページ切り替え時に一瞬で切り替わるように設定（カクつき防止） */
+            transition: top 0s ease-in-out; 
         }
 
         /* 重大障害 */
@@ -136,8 +136,8 @@
             font-size: 24px; 
             line-height: 1.6;
             margin-bottom: 16px;
-            padding: 18px 22px 18px 45px; /* 左側に余白を作って文字を揃えやすく */
-            text-indent: -25px; /* 行頭のタグだけ少し飛び出させる */
+            padding: 18px 22px 18px 45px; 
+            text-indent: -25px; 
             border-radius: 8px;
             background-color: #191010; 
             color: #F8FAFC;
@@ -155,7 +155,7 @@
             font-size: 21px;
             line-height: 1.6;
             margin-bottom: 14px;
-            padding: 16px 20px 16px 45px; /* 左側に余白 */
+            padding: 16px 20px 16px 45px; 
             text-indent: -25px;
             border-radius: 8px;
             background-color: #1A1710; 
@@ -351,131 +351,4 @@
                         else if (fullTextForRoute.includes("深川留萌") || fullTextForRoute.includes("深川西") || fullTextForRoute.includes("留萌")) routeName = "深川留萌自動車道";
                         else if (fullTextForRoute.includes("旭川紋別") || fullTextForRoute.includes("白滝") || fullTextForRoute.includes("遠軽")) routeName = "旭川紋別自動車道";
                         else if (fullTextForRoute.includes("日高") || fullTextForRoute.includes("門別")) routeName = "日高自動車道";
-                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
-                        else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
-                        else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
-                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野")) routeName = "美幌バイパス・美幌網走道";
-                        else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
-                        
-                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
-                            routeName = rdText;
-                        }
-
-                        let displayLocation = iText || nText || "管轄区間";
-                        if (displayLocation.endsWith("付近")) {
-                            displayLocation = displayLocation.slice(0, -2);
-                        }
-
-                        let actualStatusText = cText || rdText || "運行規制中";
-                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
-                        detailText = detailText.replace("規制なし：", "");
-
-                        if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
-                            return; 
-                        }
-
-                        if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害")) {
-                            let typeTag = "【通行止め】";
-                            if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
-                            else if (fullTextForRoute.includes("障害")) typeTag = "【路上障害】";
-                            
-                            redAlerts.push({ text: detailText, tag: typeTag });
-                        } else {
-                            yellowAlerts.push({ text: detailText });
-                        }
-                    }
-                });
-            }
-
-            let finalRedHTMLs = []; let finalYellowHTMLs = [];
-            let seenTexts = new Set();
-
-            redAlerts.forEach(item => {
-                if (seenTexts.has(item.text)) return;
-                seenTexts.add(item.text); closedCount++;
-                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">${item.tag}</span> ${item.text}</div>`);
-            });
-
-            yellowAlerts.forEach(item => {
-                if (seenTexts.has(item.text)) return;
-                seenTexts.add(item.text); constCount++;
-                finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【規制・工事】</span> ${item.text}</div>`);
-            });
-
-            // 左側（重大障害）描画処理
-            const leftInner = document.getElementById("left-inner-container");
-            if (finalRedHTMLs.length === 0) {
-                leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
-                leftInner.style.top = "15px";
-                if (pageTimers.left) clearTimeout(pageTimers.left);
-            } else { 
-                leftInner.innerHTML = finalRedHTMLs.join(""); 
-                startPageControl("left"); 
-            }
-
-            // 右側（工事規制）描画処理
-            const rightInner = document.getElementById("right-inner-container");
-            if (finalYellowHTMLs.length === 0) {
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
-                rightInner.style.top = "15px";
-                if (pageTimers.right) clearTimeout(pageTimers.right);
-            } else { 
-                rightInner.innerHTML = finalYellowHTMLs.join(""); 
-                startPageControl("right"); 
-            }
-
-            // テロップ更新
-            let tickerParts = [`情報同期：${timeStr}更新`, `運行管制：指定特定経路リアルタイム巡航中`];
-            if (closedCount > 0) { tickerParts.push(`緊急速報：管轄路線内で【通行止め・事故】が現在 ${closedCount} 件発生しています。`); } 
-            else { tickerParts.push("現在、管轄路線内に通行止めや重大事故情報はありません。"); }
-            if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修作業を計 ${constCount} 件検出。`);
-            document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
-        }
-
-        // 新しいページ切り替え（ページネーション）制御システム
-        function startPageControl(side) {
-            if (pageTimers[side]) clearTimeout(pageTimers[side]);
-
-            const outerBox = document.getElementById(`${side}-outer-box`);
-            const innerBox = document.getElementById(`${side}-inner-container`);
-            
-            // 初期状態に戻す
-            innerBox.style.top = "15px";
-            
-            let currentPage = 0;
-            const viewHeight = outerBox.clientHeight - 30; // 上下パディング等を考慮した表示可能域
-            
-            function nextPage() {
-                const totalHeight = innerBox.clientHeight;
-                
-                // 全件が1画面に収まっている場合はページめくりしない
-                if (totalHeight <= viewHeight) return;
-
-                // 最大何ページあるか計算
-                const maxPage = Math.ceil(totalHeight / viewHeight);
-                
-                currentPage++;
-                
-                if (currentPage >= maxPage) {
-                    // 最後のページまでいったら最初のページ（トップ）に戻る
-                    currentPage = 0;
-                    innerBox.style.top = "15px";
-                } else {
-                    // 次のページ分（viewHeight分）上にずらす
-                    innerBox.style.top = `-${(currentPage * viewHeight) - 15}px`;
-                }
-
-                // 5秒（5000ms）ごとに次のページへ
-                pageTimers[side] = setTimeout(nextPage, 5000);
-            }
-
-            // 最初に動き出すまで5秒待つ
-            pageTimers[side] = setTimeout(nextPage, 5000);
-        }
-
-        // 1分ごとにデータを再読み込み
-        setInterval(checkHokkaidoTrafficTextOnly, 60000); 
-        setTimeout(checkHokkaidoTrafficTextOnly, 100);
-    </script>
-</body>
-</html>
+                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯... [truncated]
