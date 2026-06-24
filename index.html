@@ -117,7 +117,7 @@
             flex: 1;
             background-color: #000000;
             border-radius: 8px;
-            padding: 15px;
+            padding: 15px; 
             overflow: hidden;
             box-sizing: border-box;
             position: relative;
@@ -127,14 +127,13 @@
             position: absolute;
             width: calc(100% - 30px);
             top: 15px;
-            transition: top 0.5s ease-in-out; 
         }
 
-        /* 重大障害：はみ出し防止用の3行制限を追加 */
+        /* 重大障害 */
         .alert-item-red {
             font-size: 24px; 
             line-height: 1.5;
-            margin-bottom: 16px;
+            margin-bottom: 16px; 
             padding: 14px 20px 14px 45px; 
             text-indent: -25px; 
             border-radius: 8px;
@@ -143,12 +142,11 @@
             border: 1px solid #3A1E1E;
             border-left: 8px solid #EF4444;
             
-            /* 3行以上になったら自動で「...」にする設定 */
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 3; 
             overflow: hidden;
-            max-height: 140px; /* 1マスの最大高さを固定化して見切れを完璧に防ぐ */
+            max-height: 140px; 
         }
         
         .alert-closed-tag {
@@ -156,11 +154,11 @@
             font-weight: bold;
         }
 
-        /* 工事規制：同じく3行制限を追加 */
+        /* 工事規制 */
         .alert-item-yellow {
             font-size: 21px;
             line-height: 1.5;
-            margin-bottom: 14px;
+            margin-bottom: 14px; 
             padding: 12px 20px 12px 45px; 
             text-indent: -25px;
             border-radius: 8px;
@@ -169,7 +167,6 @@
             border: 1px solid #3A321E;
             border-left: 6px solid #F59E0B;
 
-            /* 3行以上になったら自動で「...」にする設定 */
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 3; 
@@ -288,7 +285,6 @@
     </div>
 
     <script>
-        // グローバルタイマー管理用オブジェクト
         let pageTimers = { left: null, right: null };
 
         function checkHokkaidoTrafficTextOnly() {
@@ -322,7 +318,7 @@
 
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
-                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江别", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
@@ -333,7 +329,7 @@
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
                 "別保", "尾幌", "糸鱼沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                "陸別", "置户", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
+                "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
                 "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
                 "ＢＳ", "BS", "バスストップ", "停留所", "栗沢", "樽前"
             ];
@@ -420,22 +416,19 @@
             if (pageTimers.left) clearTimeout(pageTimers.left);
             if (finalRedHTMLs.length === 0) {
                 leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
-                leftInner.style.top = "15px";
             } else { 
                 leftInner.innerHTML = finalRedHTMLs.join(""); 
-                setTimeout(() => startPageControl("left"), 100); 
+                setTimeout(() => startPageControl("left"), 200); 
             }
 
             // 右側（工事規制）
             const rightInner = document.getElementById("right-inner-container");
             if (pageTimers.right) clearTimeout(pageTimers.right);
             if (finalYellowHTMLs.length === 0) {
-                innerBox = document.getElementById("right-inner-container"); //バグ修正用安全策
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
-                rightInner.style.top = "15px";
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません.</div>`;
             } else { 
                 rightInner.innerHTML = finalYellowHTMLs.join(""); 
-                setTimeout(() => startPageControl("right"), 100); 
+                setTimeout(() => startPageControl("right"), 200); 
             }
 
             // テロップ更新
@@ -446,47 +439,71 @@
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // ページ切り替え制御システム（見切れ＆はみ出し防止版）
+        // 新しいページ切り替え制御システム（ブロック単位・見切れ完全撲滅）
         function startPageControl(side) {
             if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
             const outerBox = document.getElementById(`${side}-outer-box`);
             const innerBox = document.getElementById(`${side}-inner-container`);
             
-            innerBox.style.top = "15px";
+            const items = Array.from(innerBox.children);
+            if (items.length === 0) return;
+
+            const viewHeight = outerBox.clientHeight - 30; // 上下パディング(15px×2)を考慮
             
-            let currentPage = 0;
-            const viewHeight = outerBox.clientHeight - 30; 
-            const items = innerBox.children;
+            // 全ての要素を一回表示状態にして高さを計測できるようにする
+            items.forEach(item => item.style.display = 'block');
             
-            let pageTopPositions = [0]; 
+            let pages = [[]];
+            let currentPageIndex = 0;
             let currentHeightSum = 0;
 
-            for (let i = 0; i < items.length; i++) {
-                currentHeightSum += items[i].offsetHeight + 16; 
+            // 各要素をどのページに振り分けるか計算
+            items.forEach((item) => {
+                const marginBottom = side === 'left' ? 16 : 14;
+                const itemHeight = item.offsetHeight + marginBottom;
 
-                if (currentHeightSum > viewHeight) {
-                    pageTopPositions.push(items[i].offsetTop); 
-                    currentHeightSum = items[i].offsetHeight + 16; 
-                }
-            }
-            
-            function nextPage() {
-                if (pageTopPositions.length <= 1) return;
-
-                currentPage++;
-                if (currentPage >= pageTopPositions.length) {
-                    currentPage = 0;
+                // もし現在のページに追加すると、表示枠をオーバーしてしまう場合
+                if (currentHeightSum + itemHeight > viewHeight) {
+                    if (pages[currentPageIndex].length > 0) {
+                        // 次のページを作成してそこに格納
+                        currentPageIndex++;
+                        pages[currentPageIndex] = [];
+                        currentHeightSum = 0;
+                    }
                 }
                 
-                innerBox.style.top = `-${pageTopPositions[currentPage] - 15}px`;
+                pages[currentPageIndex].push(item);
+                currentHeightSum += itemHeight;
+            });
 
-                pageTimers[side] = setTimeout(nextPage, 5000);
+            // 1ページに全て収まる（ページが1つしかない）場合は何もしない
+            if (pages.length <= 1) {
+                items.forEach(item => item.style.display = 'block');
+                innerBox.style.top = "15px";
+                return;
             }
 
-            if (pageTopPositions.length > 1) {
-                pageTimers[side] = setTimeout(nextPage, 5000);
+            // ページ表示切り替えロジック
+            let pageToShow = 0;
+            function displayPage() {
+                // すべて非表示にする
+                items.forEach(item => item.style.display = 'none');
+                
+                // 現在の対象ページの要素だけを表示
+                pages[pageToShow].forEach(item => item.style.display = 'block');
+                
+                // コンテナ位置を上部にリセット
+                innerBox.style.top = "15px";
+
+                // 次のページインデックスをセット
+                pageToShow = (pageToShow + 1) % pages.length;
+
+                // 5秒ごとにページを切り替え
+                pageTimers[side] = setTimeout(displayPage, 5000);
             }
+
+            displayPage();
         }
 
         // 1分ごとにデータを再読み込み
