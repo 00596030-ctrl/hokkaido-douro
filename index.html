@@ -127,8 +127,7 @@
             position: absolute;
             width: calc(100% - 30px);
             top: 15px;
-            /* ページ切り替え時に一瞬で切り替わるように設定（カクつき防止） */
-            transition: top 0s ease-in-out; 
+            transition: top 0.5s ease-in-out; /* ページ切り替えをスムーズにするアニメーションを追加 */
         }
 
         /* 重大障害 */
@@ -351,4 +350,137 @@
                         else if (fullTextForRoute.includes("深川留萌") || fullTextForRoute.includes("深川西") || fullTextForRoute.includes("留萌")) routeName = "深川留萌自動車道";
                         else if (fullTextForRoute.includes("旭川紋別") || fullTextForRoute.includes("白滝") || fullTextForRoute.includes("遠軽")) routeName = "旭川紋別自動車道";
                         else if (fullTextForRoute.includes("日高") || fullTextForRoute.includes("門別")) routeName = "日高自動車道";
-                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯... [truncated]
+                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
+                        else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
+                        else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根lock専用道";
+                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野")) routeName = "美幌バイパス・美幌網走道";
+                        else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
+                        
+                        if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
+                            routeName = rdText;
+                        }
+
+                        let displayLocation = iText || nText || "管轄区間";
+                        if (displayLocation.endsWith("付近")) {
+                            displayLocation = displayLocation.slice(0, -2);
+                        }
+
+                        let actualStatusText = cText || rdText || "運行規制中";
+                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
+                        detailText = detailText.replace("規制なし：", "");
+
+                        if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
+                            return; 
+                        }
+
+                        if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害")) {
+                            let typeTag = "【通行止め】";
+                            if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
+                            else if (fullTextForRoute.includes("障害")) typeTag = "【路上障害】";
+                            
+                            redAlerts.push({ text: detailText, tag: typeTag });
+                        } else {
+                            yellowAlerts.push({ text: detailText });
+                        }
+                    }
+                });
+            }
+
+            let finalRedHTMLs = []; let finalYellowHTMLs = [];
+            let seenTexts = new Set();
+
+            redAlerts.forEach(item => {
+                if (seenTexts.has(item.text)) return;
+                seenTexts.add(item.text); closedCount++;
+                finalRedHTMLs.push(`<div class="alert-item-red"><span class="alert-closed-tag">${item.tag}</span> ${item.text}</div>`);
+            });
+
+            yellowAlerts.forEach(item => {
+                if (seenTexts.has(item.text)) return;
+                seenTexts.add(item.text); constCount++;
+                finalYellowHTMLs.push(`<div class="alert-item-yellow"><span class="alert-const-tag">【規制・工事】</span> ${item.text}</div>`);
+            });
+
+            // 左側（重大障害）
+            const leftInner = document.getElementById("left-inner-container");
+            if (pageTimers.left) clearTimeout(pageTimers.left);
+            if (finalRedHTMLs.length === 0) {
+                leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
+                leftInner.style.top = "15px";
+            } else { 
+                leftInner.innerHTML = finalRedHTMLs.join(""); 
+                // 1画面に収まり切らない場合があるため、描画直後（100ms秒後）に計算を開始させる
+                setTimeout(() => startPageControl("left"), 100); 
+            }
+
+            // 右側（工事規制）
+            const rightInner = document.getElementById("right-inner-container");
+            if (pageTimers.right) clearTimeout(pageTimers.right);
+            if (finalYellowHTMLs.length === 0) {
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
+                rightInner.style.top = "15px";
+            } else { 
+                rightInner.innerHTML = finalYellowHTMLs.join(""); 
+                setTimeout(() => startPageControl("right"), 100); 
+            }
+
+            // テロップ更新
+            let tickerParts = [`情報同期：${timeStr}更新`, `運行管制：指定特定経路リアルタイム巡航中`];
+            if (closedCount > 0) { tickerParts.push(`緊急速報：管轄路線内で【通行止め・事故】が現在 ${closedCount} 件発生しています。`); } 
+            else { tickerParts.push("現在、管轄路線内に通行止めや重大事故情報はありません。"); }
+            if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修作業を計 ${constCount} 件検出。`);
+            document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
+        }
+
+        // ページ切り替え制御システム（見切れ防止・5秒アニメーション版）
+        function startPageControl(side) {
+            if (pageTimers[side]) clearTimeout(pageTimers[side]);
+
+            const outerBox = document.getElementById(`${side}-outer-box`);
+            const innerBox = document.getElementById(`${side}-inner-container`);
+            
+            innerBox.style.top = "15px";
+            
+            let currentPage = 0;
+            const viewHeight = outerBox.clientHeight - 30; 
+            const items = innerBox.children;
+            
+            let pageTopPositions = [0]; 
+            let currentHeightSum = 0;
+
+            // 各要素の「実際の高さ」を合計していき、見切れない位置でページを区切る
+            for (let i = 0; i < items.length; i++) {
+                currentHeightSum += items[i].offsetHeight + 16; // 16は下マージン
+
+                if (currentHeightSum > viewHeight) {
+                    pageTopPositions.push(items[i].offsetTop); 
+                    currentHeightSum = items[i].offsetHeight + 16; 
+                }
+            }
+            
+            function nextPage() {
+                if (pageTopPositions.length <= 1) return;
+
+                currentPage++;
+                if (currentPage >= pageTopPositions.length) {
+                    currentPage = 0;
+                }
+                
+                // 要素のきりの良い位置に「ガサッ」と動かす（見切れ防止）
+                innerBox.style.top = `-${pageTopPositions[currentPage] - 15}px`;
+
+                // 5秒ごとに次のページへ
+                pageTimers[side] = setTimeout(nextPage, 5000);
+            }
+
+            if (pageTopPositions.length > 1) {
+                pageTimers[side] = setTimeout(nextPage, 5000);
+            }
+        }
+
+        // 1分ごとにデータを再読み込み
+        setInterval(checkHokkaidoTrafficTextOnly, 60000); 
+        setTimeout(checkHokkaidoTrafficTextOnly, 100);
+    </script>
+</body>
+</html>
