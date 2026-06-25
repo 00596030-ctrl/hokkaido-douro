@@ -318,7 +318,7 @@
 
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
-                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江别", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
@@ -376,7 +376,7 @@
                         }
 
                         let actualStatusText = cText || rdText || "運行規制中";
-                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
+                        let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText} Mugen が検出されています。`;
                         detailText = detailText.replace("規制なし：", "");
 
                         if (redAlerts.some(a => a.text === detailText) || yellowAlerts.some(a => a.text === detailText)) {
@@ -416,6 +416,7 @@
             if (pageTimers.left) clearTimeout(pageTimers.left);
             if (finalRedHTMLs.length === 0) {
                 leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
+                leftInner.style.top = "15px";
             } else { 
                 leftInner.innerHTML = finalRedHTMLs.join(""); 
                 setTimeout(() => startPageControl("left"), 200); 
@@ -425,7 +426,8 @@
             const rightInner = document.getElementById("right-inner-container");
             if (pageTimers.right) clearTimeout(pageTimers.right);
             if (finalYellowHTMLs.length === 0) {
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません.</div>`;
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
+                rightInner.style.top = "15px";
             } else { 
                 rightInner.innerHTML = finalYellowHTMLs.join(""); 
                 setTimeout(() => startPageControl("right"), 200); 
@@ -439,68 +441,68 @@
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // 新しいページ切り替え制御システム（ブロック単位・見切れ完全撲滅）
+        // ページ切り替え制御システム（8秒切り替え版）
         function startPageControl(side) {
             if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
             const outerBox = document.getElementById(`${side}-outer-box`);
             const innerBox = document.getElementById(`${side}-inner-container`);
             
-            const items = Array.from(innerBox.children);
-            if (items.length === 0) return;
-
-            const viewHeight = outerBox.clientHeight - 30; // 上下パディング(15px×2)を考慮
+            innerBox.style.top = "15px";
             
-            // 全ての要素を一回表示状態にして高さを計測できるようにする
-            items.forEach(item => item.style.display = 'block');
+            let currentPage = 0;
+            const style = window.getComputedStyle(outerBox);
+            const paddingTop = parseFloat(style.paddingTop);
+            const paddingBottom = parseFloat(style.paddingBottom);
+            const viewHeight = outerBox.clientHeight - paddingTop - paddingBottom; 
+            const items = innerBox.children;
             
-            let pages = [[]];
-            let currentPageIndex = 0;
+            let pageTopPositions = [0]; 
             let currentHeightSum = 0;
 
-            // 各要素をどのページに振り分けるか計算
-            items.forEach((item) => {
+            for (let i = 0; i < items.length; i++) {
                 const marginBottom = side === 'left' ? 16 : 14;
-                const itemHeight = item.offsetHeight + marginBottom;
+                const itemHeight = items[i].offsetHeight + marginBottom;
 
-                // もし現在のページに追加すると、表示枠をオーバーしてしまう場合
                 if (currentHeightSum + itemHeight > viewHeight) {
-                    if (pages[currentPageIndex].length > 0) {
-                        // 次のページを作成してそこに格納
-                        currentPageIndex++;
-                        pages[currentPageIndex] = [];
-                        currentHeightSum = 0;
+                    if (i > 0 && currentHeightSum > 0) {
+                        pageTopPositions.push(items[i].offsetTop); 
+                        currentHeightSum = itemHeight;
+                    } else {
+                        currentHeightSum += itemHeight;
                     }
+                } else {
+                    currentHeightSum += itemHeight;
                 }
-                
-                pages[currentPageIndex].push(item);
-                currentHeightSum += itemHeight;
-            });
-
-            // 1ページに全て収まる（ページが1つしかない）場合は何もしない
-            if (pages.length <= 1) {
+            }
+            
+            if (pageTopPositions.length <= 1) {
                 items.forEach(item => item.style.display = 'block');
                 innerBox.style.top = "15px";
                 return;
             }
 
-            // ページ表示切り替えロジック
             let pageToShow = 0;
             function displayPage() {
-                // すべて非表示にする
                 items.forEach(item => item.style.display = 'none');
+                pages = pageTopPositions.map((pos, index) => {
+                    return Array.from(items).filter((item) => {
+                        if (index === pageTopPositions.length - 1) {
+                            return item.offsetTop >= pos;
+                        }
+                        return item.offsetTop >= pos && item.offsetTop < pageTopPositions[index + 1];
+                    });
+                });
                 
-                // 現在の対象ページの要素だけを表示
-                pages[pageToShow].forEach(item => item.style.display = 'block');
+                if(pages[pageToShow]) {
+                    pages[pageToShow].forEach(item => item.style.display = 'block');
+                }
                 
-                // コンテナ位置を上部にリセット
                 innerBox.style.top = "15px";
+                pageToShow = (pageToShow + 1) % pageTopPositions.length;
 
-                // 次のページインデックスをセット
-                pageToShow = (pageToShow + 1) % pages.length;
-
-                // 5秒ごとにページを切り替え
-                pageTimers[side] = setTimeout(displayPage, 5000);
+                // ★5000から8000(8秒)へ変更しました
+                pageTimers[side] = setTimeout(displayPage, 8000);
             }
 
             displayPage();
