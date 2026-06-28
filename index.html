@@ -127,6 +127,7 @@
             position: absolute;
             width: calc(100% - 30px);
             top: 15px;
+            transition: top 0.5s ease-in-out; 
         }
 
         /* 重大障害 */
@@ -293,21 +294,29 @@
             fetch(jsonUrl)
                 .then(response => {
                     if (!response.ok) throw new Error("data.jsonが見つかりません。");
-                    return response.json();
+                    
+                    // 【変更点】ファイルの最終更新日時（Last-Modified）をヘッダーから取得
+                    const lastModified = response.headers.get('Last-Modified');
+                    let fileTimeStr = "-時-分現在";
+                    if (lastModified) {
+                        const fileDate = new Date(lastModified);
+                        fileTimeStr = `${fileDate.getHours()}時${String(fileDate.getMinutes()).padStart(2, '0')}分現在`;
+                    }
+                    
+                    // JSONパースしてメイン処理に引き渡す際、取得時間も一緒に渡す
+                    return response.json().then(data => ({ data, fileTimeStr }));
                 })
-                .then(jsonData => {
-                    updateControlBoard(jsonData);
+                .then(({ data, fileTimeStr }) => {
+                    updateControlBoard(data, fileTimeStr);
                 })
                 .catch(error => {
                     console.error("データ同期エラー:", error);
                 });
         }
 
-        function updateControlBoard(jsonData) {
-            const now = new Date();
-            const timeStr = `${now.getHours()}時${String(now.getMinutes()).padStart(2, '0')}分現在`;
-            
-            document.getElementById("update-time-text").innerText = timeStr;
+        function updateControlBoard(jsonData, fileTimeStr) {
+            // 【変更点】現在時刻ではなく、取得したファイルのタイムスタンプを表示
+            document.getElementById("update-time-text").innerText = fileTimeStr;
             document.getElementById("left-clock-tag").innerText = `[データ同期完了]`;
             document.getElementById("right-clock-tag").innerText = `[データ同期完了]`;
 
@@ -318,7 +327,7 @@
 
             const targetKeywords = [
                 "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
-                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江别", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
+                "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
@@ -344,13 +353,16 @@
                     let iText = (props.i || "").toString().trim();   
                     let nText = (props.n || "").toString().trim();   
 
-                    if (iText.includes("日高門別") && iText.includes("日高厚賀")) return;
-                    if (iText.includes("千歳恵庭") && (cText.includes("事故") || rdText.includes("事故"))) return;
-                    if (iText.includes("豊浦") && (cText.includes("障害") || rdText.includes("障害"))) return;
+                    let fullTextForRoute = iText + nText + rdText + cText;
+                    let isClosureMessage = fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害");
+
+                    if (!isClosureMessage) {
+                        if (iText.includes("日高門別") && iText.includes("日高厚賀")) return;
+                        if (iText.includes("千歳恵庭") && cText.includes("事故")) return;
+                        if (iText.includes("豊浦") && cText.includes("障害")) return;
+                    }
 
                     let routeName = "管轄専用道";
-                    let fullTextForRoute = iText + nText + rdText + cText;
-
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
                     if (isHit || iText.includes("樽前") || nText.includes("樽前")) {
@@ -360,7 +372,7 @@
                         else if (fullTextForRoute.includes("深川留萌") || fullTextForRoute.includes("深川西") || fullTextForRoute.includes("留萌")) routeName = "深川留萌自動車道";
                         else if (fullTextForRoute.includes("旭川紋別") || fullTextForRoute.includes("白滝") || fullTextForRoute.includes("遠軽")) routeName = "旭川紋別自動車道";
                         else if (fullTextForRoute.includes("日高") || fullTextForRoute.includes("門別")) routeName = "日高自動車道";
-                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("中札内")) routeName = "帯広広尾自動車道";
+                        else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("중札内")) routeName = "帯広広尾自動車道";
                         else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
                         else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
                         else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野")) routeName = "美幌バイパス・美幌網走道";
@@ -383,7 +395,7 @@
                             return; 
                         }
 
-                        if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害")) {
+                        if (isClosureMessage) {
                             let typeTag = "【通行止め】";
                             if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
                             else if (fullTextForRoute.includes("障害")) typeTag = "【路上障害】";
@@ -418,55 +430,54 @@
                 leftInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>通行止め等の重大障害はありません。</div>`;
             } else { 
                 leftInner.innerHTML = finalRedHTMLs.join(""); 
-                setTimeout(() => startPageControl("left"), 200); 
+                setTimeout(() => startPageControl("left"), 500); 
             }
 
             // 右側（工事規制）
             const rightInner = document.getElementById("right-inner-container");
             if (pageTimers.right) clearTimeout(pageTimers.right);
             if (finalYellowHTMLs.length === 0) {
-                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません.</div>`;
+                rightInner.innerHTML = `<div class="no-alert no-alert-green">現在、重要路線内に<br>工事・車線規制情報はありません。</div>`;
             } else { 
                 rightInner.innerHTML = finalYellowHTMLs.join(""); 
-                setTimeout(() => startPageControl("right"), 200); 
+                setTimeout(() => startPageControl("right"), 500); 
             }
 
             // テロップ更新
-            let tickerParts = [`情報同期：${timeStr}更新`, `運行管制：指定特定経路リアルタイム巡航中`];
+            let tickerParts = [`情報同期：${fileTimeStr}`, `運行管制：指定特定経路リアルタイム巡航中`];
             if (closedCount > 0) { tickerParts.push(`緊急速報：管轄路線内で【通行止め・事故】が現在 ${closedCount} 件発生しています。`); } 
             else { tickerParts.push("現在、管轄路線内に通行止めや重大事故情報はありません。"); }
             if (constCount > 0) tickerParts.push(`【運行規制】各路線で車線規制・維持補修作業を計 ${constCount} 件検出。`);
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // 新しいページ切り替え制御システム（ブロック単位・見切れ完全撲滅）
+        // ページ切り替え制御システム（ブロック単位・8秒切り替え版）
         function startPageControl(side) {
             if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
             const outerBox = document.getElementById(`${side}-outer-box`);
             const innerBox = document.getElementById(`${side}-inner-container`);
             
+            innerBox.style.top = "15px";
+            
+            let currentPage = 0;
+            const style = window.getComputedStyle(outerBox);
+            const paddingTop = parseFloat(style.paddingTop);
+            const paddingBottom = parseFloat(style.paddingBottom);
+            const viewHeight = outerBox.clientHeight - paddingTop - paddingBottom; 
             const items = Array.from(innerBox.children);
             if (items.length === 0) return;
-
-            const viewHeight = outerBox.clientHeight - 30; // 上下パディング(15px×2)を考慮
-            
-            // 全ての要素を一回表示状態にして高さを計測できるようにする
-            items.forEach(item => item.style.display = 'block');
             
             let pages = [[]];
             let currentPageIndex = 0;
             let currentHeightSum = 0;
 
-            // 各要素をどのページに振り分けるか計算
             items.forEach((item) => {
                 const marginBottom = side === 'left' ? 16 : 14;
-                const itemHeight = item.offsetHeight + marginBottom;
+                const itemHeight = Math.max(item.offsetHeight, side === 'left' ? 80 : 60) + marginBottom;
 
-                // もし現在のページに追加すると、表示枠をオーバーしてしまう場合
                 if (currentHeightSum + itemHeight > viewHeight) {
                     if (pages[currentPageIndex].length > 0) {
-                        // 次のページを作成してそこに格納
                         currentPageIndex++;
                         pages[currentPageIndex] = [];
                         currentHeightSum = 0;
@@ -477,30 +488,19 @@
                 currentHeightSum += itemHeight;
             });
 
-            // 1ページに全て収まる（ページが1つしかない）場合は何もしない
             if (pages.length <= 1) {
                 items.forEach(item => item.style.display = 'block');
-                innerBox.style.top = "15px";
                 return;
             }
 
-            // ページ表示切り替えロジック
             let pageToShow = 0;
             function displayPage() {
-                // すべて非表示にする
                 items.forEach(item => item.style.display = 'none');
-                
-                // 現在の対象ページの要素だけを表示
-                pages[pageToShow].forEach(item => item.style.display = 'block');
-                
-                // コンテナ位置を上部にリセット
-                innerBox.style.top = "15px";
-
-                // 次のページインデックスをセット
+                if(pages[pageToShow]) {
+                    pages[pageToShow].forEach(item => item.style.display = 'block');
+                }
                 pageToShow = (pageToShow + 1) % pages.length;
-
-                // 8秒ごとにページを切り替え
-                pageTimers[side] = setTimeout(displayPage, 8000);
+                pageTimers[side] = setTimeout(displayPage, 8000); // 8秒維持
             }
 
             displayPage();
