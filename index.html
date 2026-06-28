@@ -299,7 +299,12 @@
                     let fileTimeStr = "-時-分現在";
                     if (lastModified) {
                         const fileDate = new Date(lastModified);
-                        fileTimeStr = `${fileDate.getHours()}時${String(fileDate.getMinutes()).padStart(2, '0')}分現在`;
+                        
+                        // 【変更点】サーバー遅延対策：取得した分の数値を15分刻みに「切り捨て丸め」する
+                        let rawMinutes = fileDate.getMinutes();
+                        let roundedMinutes = Math.floor(rawMinutes / 15) * 15; // 27分なら15分、12分なら00分に変換
+                        
+                        fileTimeStr = `${fileDate.getHours()}時${String(roundedMinutes).padStart(2, '0')}分現在`;
                     }
                     
                     return response.json().then(data => ({ data, fileTimeStr }));
@@ -376,16 +381,12 @@
                             displayLocation = displayLocation.slice(0, -2);
                         }
 
-                        // 元データに「規制なし」が含まれているか判定するフラグ
                         let hasNoRegulationText = cText.includes("規制なし") || rdText.includes("規制なし") || fullTextForRoute.includes("規制なし");
 
                         let actualStatusText = cText || rdText || "運行規制中";
                         let detailText = `${routeName}：${displayLocation}付近において、${actualStatusText}が検出されています。`;
-                        
-                        // 不要な重複表記を削除
                         detailText = detailText.replace("規制なし：", "");
 
-                        // 【変更点】故障車かつ規制なしの場合、ドライバー向けに親切な文言を末尾に追加
                         if (fullTextForRoute.includes("故障車") && hasNoRegulationText) {
                             detailText += "（現在規制はなし）";
                         }
