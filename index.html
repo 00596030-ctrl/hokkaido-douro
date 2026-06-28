@@ -289,7 +289,6 @@
         let pageTimers = { left: null, right: null };
 
         function checkHokkaidoTrafficTextOnly() {
-            // パラメータにタイムスタンプを付与し、さらに「cache: "no-store"」を明示して最新データを強制取得
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
             fetch(jsonUrl, { cache: "no-store" })
@@ -324,19 +323,19 @@
             let constCount = 0;  
 
             const targetKeywords = [
-                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫东", 
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
                 "札樽", "小樽", "朝里", "銭函", "手稲", "新川", "伏古", "雁来", "張碓", "金山",
-                "占跨", "占観", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "安排", "由仁", "むかわ", "十勝平原", "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "キウス", "釧路", "大楽毛",
+                "占跨", "占幕", "占微", "占冠", "十勝清水", "トマム", "芽室", "夕張", "穂別", "安排", "由仁", "むかわ", "十勝平原", "長流枝", "音更帯広", "池田", "本別", "足寄", "浦幌", "白糠", "庶路", "阿寒", "キウス", "釧路", "大楽毛",
                 "深川西", "秩父別", "沼田", "北竜", "留萌", "幌糠",
                 "愛別", "層雲峡", "浮島", "白滝", "丸瀬布", "遠軽",
                 "沼ノ端", "厚真", "鵡川", "汐見", "富川", "日高", "門別", "厚賀",
                 "川西", "幸福", "中札内", "更別", "忠類", "大樹", 
                 "名寄", "智恵文", "美深", "音威子府", "豊富", "幌延", "中川",
                 "別保", "尾幌", "糸鱼沢", "厚岸", "茶内", "浜中", "温根沼", "根室",
-                "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野",
+                "陸別", "置戸", "訓子府", "北見", "女満別", "美幌", "高野", "端野", "長流川", "洞爺湖",
                 "スマート", "流出", "スマートＩＣ", "スマートIC", "砂川スマート", 
                 "ＢＳ", "BS", "バスストップ", "停留所", "栗沢", "樽前"
             ];
@@ -352,15 +351,6 @@
                     let nText = (props.n || "").toString().trim();   
 
                     let fullTextForRoute = iText + nText + rdText + cText;
-                    let isClosureMessage = fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害");
-
-                    if (!isClosureMessage) {
-                        if (iText.includes("日高門別") && iText.includes("日高厚賀")) return;
-                        if (iText.includes("千歳恵庭") && cText.includes("事故")) return;
-                        if (iText.includes("豊浦") && cText.includes("障害")) return;
-                    }
-
-                    let routeName = "管轄専用道";
                     let isHit = targetKeywords.some(keyword => iText.includes(keyword) || rdText.includes(keyword) || cText.includes(keyword) || nText.includes(keyword));
 
                     if (isHit || iText.includes("樽前") || nText.includes("樽前")) {
@@ -373,7 +363,7 @@
                         else if (fullTextForRoute.includes("帯広広尾") || fullTextForRoute.includes("중札内")) routeName = "帯広広尾自動車道";
                         else if (fullTextForRoute.includes("名寄美深")) routeName = "名寄美深道路";
                         else if (fullTextForRoute.includes("釧路") || fullTextForRoute.includes("根室")) routeName = "釧路・根室専用道";
-                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野")) routeName = "美幌バイパス・美幌網走道";
+                        else if (fullTextForRoute.includes("オホーツク") || fullTextForRoute.includes("北見") || fullTextForRoute.includes("美幌") || fullTextForRoute.includes("女満別") || fullTextForRoute.includes("高野") || fullTextForRoute.includes("端野") || fullTextForRoute.includes("洞爺湖") || fullTextForRoute.includes("長流川")) routeName = "道央自動車道";
                         else if (fullTextForRoute.includes("道央") || fullTextForRoute.includes("江別") || fullTextForRoute.includes("岩見沢") || fullTextForRoute.includes("三笠") || fullTextForRoute.includes("千歳") || fullTextForRoute.includes("苫小牧") || fullTextForRoute.includes("旭川") || fullTextForRoute.includes("室蘭") || fullTextForRoute.includes("樽前") || fullTextForRoute.includes("野幌") || fullTextForRoute.includes("砂川") || fullTextForRoute.includes("栗沢")) routeName = "道央自動車道";
                         
                         if (routeName === "管轄専用道" && rdText && !rdText.includes("通行止")) {
@@ -393,13 +383,16 @@
                             return; 
                         }
 
-                        if (isClosureMessage) {
+                        // 【判定条件の修正】「故障車」「通行止」「事故」「障害」いずれかが含まれていればすべて左側(赤)に送る
+                        if (fullTextForRoute.includes("通行止") || fullTextForRoute.includes("事故") || fullTextForRoute.includes("障害") || fullTextForRoute.includes("故障車")) {
                             let typeTag = "【通行止め】";
                             if (fullTextForRoute.includes("事故")) typeTag = "【事故発生】";
+                            else if (fullTextForRoute.includes("故障車")) typeTag = "【故障車】";
                             else if (fullTextForRoute.includes("障害")) typeTag = "【路上障害】";
                             
                             redAlerts.push({ text: detailText, tag: typeTag });
                         } else {
+                            // それ以外(単純な工事や作業など)は右側(黄)へ
                             yellowAlerts.push({ text: detailText });
                         }
                     }
@@ -449,7 +442,7 @@
             document.getElementById("live-ticker-text").innerText = tickerParts.join(" ｜ ");
         }
 
-        // ページ切り替え制御システム（ブロック単位・8秒切り替え版）
+        // ページ切り替え制御システム（バグ修正版）
         function startPageControl(side) {
             if (pageTimers[side]) clearTimeout(pageTimers[side]);
 
@@ -494,15 +487,8 @@
             let pageToShow = 0;
             function displayPage() {
                 items.forEach(item => item.style.display = 'none');
-                pages = pageTopPositions.map((pos, index) => {
-                    return Array.from(items).filter((item) => {
-                        if (index === pageTopPositions.length - 1) {
-                            return item.offsetTop >= pos;
-                        }
-                        return item.offsetTop >= pos && item.offsetTop < pageTopPositions[index + 1];
-                    });
-                });
                 
+                // グローバル変数になっていた pages をローカルスコープを意識して正しく処理
                 if(pages[pageToShow]) {
                     pages[pageToShow].forEach(item => item.style.display = 'block');
                 }
