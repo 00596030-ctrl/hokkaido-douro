@@ -289,13 +289,13 @@
         let pageTimers = { left: null, right: null };
 
         function checkHokkaidoTrafficTextOnly() {
+            // パラメータにタイムスタンプを付与し、さらに「cache: "no-store"」を明示して最新データを強制取得
             const jsonUrl = `./data.json?t=${new Date().getTime()}`;
 
-            fetch(jsonUrl)
+            fetch(jsonUrl, { cache: "no-store" })
                 .then(response => {
                     if (!response.ok) throw new Error("data.jsonが見つかりません。");
                     
-                    // 【変更点】ファイルの最終更新日時（Last-Modified）をヘッダーから取得
                     const lastModified = response.headers.get('Last-Modified');
                     let fileTimeStr = "-時-分現在";
                     if (lastModified) {
@@ -303,7 +303,6 @@
                         fileTimeStr = `${fileDate.getHours()}時${String(fileDate.getMinutes()).padStart(2, '0')}分現在`;
                     }
                     
-                    // JSONパースしてメイン処理に引き渡す際、取得時間も一緒に渡す
                     return response.json().then(data => ({ data, fileTimeStr }));
                 })
                 .then(({ data, fileTimeStr }) => {
@@ -315,7 +314,6 @@
         }
 
         function updateControlBoard(jsonData, fileTimeStr) {
-            // 【変更点】現在時刻ではなく、取得したファイルのタイムスタンプを表示
             document.getElementById("update-time-text").innerText = fileTimeStr;
             document.getElementById("left-clock-tag").innerText = `[データ同期完了]`;
             document.getElementById("right-clock-tag").innerText = `[データ同期完了]`;
@@ -326,7 +324,7 @@
             let constCount = 0;  
 
             const targetKeywords = [
-                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫東", 
+                "大沼", "落部", "森", "八雲", "長万部", "豊浦", "虻田" , "有珠山", "伊達", "室蘭", "登別", "白老", "苫小牧", "苫东", 
                 "千歳", "恵庭", "輪厚", "北広島", "札幌", "江別", "岩見沢", "三笠", "美唄", "砂川", "滝川", "野幌",
                 "七饭藤城", "黒岩", "国縫", "静狩", "礼文", "北吉原", "竹浦", "萩野", "錦岡", "新千歳空港", "美沢", "祝梅", "茶志内", 
                 "奈井江", "江部乙", "深川", "音江連山", "旭川", "比布", "和寒", "士別剣淵", "道央",
@@ -496,10 +494,22 @@
             let pageToShow = 0;
             function displayPage() {
                 items.forEach(item => item.style.display = 'none');
+                pages = pageTopPositions.map((pos, index) => {
+                    return Array.from(items).filter((item) => {
+                        if (index === pageTopPositions.length - 1) {
+                            return item.offsetTop >= pos;
+                        }
+                        return item.offsetTop >= pos && item.offsetTop < pageTopPositions[index + 1];
+                    });
+                });
+                
                 if(pages[pageToShow]) {
                     pages[pageToShow].forEach(item => item.style.display = 'block');
                 }
+                
+                innerBox.style.top = "15px";
                 pageToShow = (pageToShow + 1) % pages.length;
+
                 pageTimers[side] = setTimeout(displayPage, 8000); // 8秒維持
             }
 
